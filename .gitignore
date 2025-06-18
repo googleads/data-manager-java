@@ -1,0 +1,36 @@
+# Ignore Gradle project-specific cache directory
+.gradle
+
+#######################################
+# Additional Gradle settings from https://raw.githubusercontent.com/github/gitignore/refs/heads/main/Gradle.gitignore
+
+# Ignore Gradle GUI config
+gradle-app.setting
+
+# Avoid ignoring Gradle wrapper jar file (.jar files are usually ignored)
+!gradle-wrapper.jar
+
+# Avoid ignoring Gradle wrappper properties
+!gradle-wrapper.properties
+
+# Ignore cache of project
+.gradletasknamecache
+
+#######################################
+
+# Ignore Gradle build output directory
+build
+# Ignore VS Code build output directory
+bin
+# Ignore the IDEA directory from IntelliJ
+.idea/
+# Ignore the IDEA run configs directory from Intellij
+.run/
+
+# Ignore swap files
+*.swp
+
+# VSCode build output and settings
+.vscode/
+*/bin/
+

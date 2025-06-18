@@ -1,0 +1,54 @@
+/*
+ * Copyright 2025 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+}
+
+group = 'com.google.api-ads'
+description = 'Utilities for working with the Data Manager API'
+version = '0.1.0'
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+publishing.publications {
+    library(MavenPublication).from components.java
+}
+
+// Creates install "alias".
+task install(dependsOn: publishToMavenLocal)
+
+repositories {
+    // Use Maven Central for resolving dependencies.
+    mavenCentral()
+    // Use Maven Local for the Data Manager library.
+    mavenLocal()
+}
+
+dependencies {
+    // Use JUnit test framework.
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.hamcrest:hamcrest:2.2'
+    testImplementation 'org.mockito:mockito-core:5.17.0'
+
+    implementation 'com.google.guava:guava:31.1-jre'
+    implementation 'com.google.crypto.tink:tink:1.17.0'
+    // Include the Google Cloud KMS extension for retrieving keys.
+    implementation 'com.google.crypto.tink:tink-gcpkms:1.10.0'
+}
+

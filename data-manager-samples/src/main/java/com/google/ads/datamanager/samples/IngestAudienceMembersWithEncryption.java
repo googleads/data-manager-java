@@ -18,11 +18,11 @@ import com.beust.jcommander.Parameter;
 import com.google.ads.datamanager.samples.common.BaseParamsConfig;
 import com.google.ads.datamanager.util.Encrypter;
 import com.google.ads.datamanager.util.UserDataFormatter;
+import com.google.ads.datamanager.util.UserDataFormatter.Encoding;
 import com.google.ads.datamanager.v1.AudienceMember;
 import com.google.ads.datamanager.v1.Consent;
 import com.google.ads.datamanager.v1.ConsentStatus;
 import com.google.ads.datamanager.v1.Destination;
-import com.google.ads.datamanager.v1.Encoding;
 import com.google.ads.datamanager.v1.EncryptionInfo;
 import com.google.ads.datamanager.v1.GcpWrappedKeyInfo;
 import com.google.ads.datamanager.v1.GcpWrappedKeyInfo.KeyType;
@@ -35,12 +35,14 @@ import com.google.ads.datamanager.v1.TermsOfService;
 import com.google.ads.datamanager.v1.TermsOfServiceStatus;
 import com.google.ads.datamanager.v1.UserData;
 import com.google.ads.datamanager.v1.UserIdentifier;
+import com.google.common.collect.Lists;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -52,6 +54,9 @@ import java.util.logging.Logger;
 public class IngestAudienceMembersWithEncryption {
   private static final Logger LOGGER =
       Logger.getLogger(IngestAudienceMembersWithEncryption.class.getName());
+
+  /** The maximum number of audience members allowed per request. */
+  private static final int MAX_MEMBERS_PER_REQUEST = 10_000;
 
   private static final class ParamsConfig
       extends BaseParamsConfig<IngestAudienceMembersWithEncryption.ParamsConfig> {
@@ -112,6 +117,13 @@ public class IngestAudienceMembersWithEncryption {
                 + " projects/PROJECT_ID/locations/global/workloadIdentityPools/"
                 + "WIP_ID/providers/PROVIDER_ID")
     String wipProvider;
+
+    @Parameter(
+        names = "--validateOnly",
+        required = false,
+        arity = 1,
+        description = "Whether to enable validateOnly on the request")
+    boolean validateOnly = true;
   }
 
   public static void main(String[] args) throws IOException, GeneralSecurityException {
@@ -149,42 +161,31 @@ public class IngestAudienceMembersWithEncryption {
 
       // Adds a UserIdentifier for each valid email address for the member.
       for (String email : member.emailAddresses) {
-        String normalizedEmail;
+        String processedEmail;
         try {
-          normalizedEmail = userDataFormatter.formatEmailAddress(email);
+          processedEmail = userDataFormatter.processEmailAddress(email, Encoding.HEX, encrypter);
         } catch (IllegalArgumentException iae) {
           // Skips invalid input.
           continue;
         }
-        // Hashes the normalized email address.
-        byte[] emailHash = userDataFormatter.hashString(normalizedEmail);
-        // Encrypts the email hash.
-        byte[] encryptedEmailHash = encryptHash(emailHash, encrypter, userDataFormatter);
-        // Encodes the encrypted email hash using hex encoding.
-        String encodedEncryptedEmail = userDataFormatter.hexEncode(encryptedEmailHash);
         // Sets the email address identifier to the encoded encrypted email hash.
         userDataBuilder.addUserIdentifiers(
-            UserIdentifier.newBuilder().setEmailAddress(encodedEncryptedEmail));
+            UserIdentifier.newBuilder().setEmailAddress(processedEmail));
       }
 
       // Adds a UserIdentifier for each valid phone number for the member.
       for (String phoneNumber : member.phoneNumbers) {
-        String normalizedPhoneNumber;
+        String processedPhoneNumber;
         try {
-          normalizedPhoneNumber = userDataFormatter.formatPhoneNumber(phoneNumber);
+          processedPhoneNumber =
+              userDataFormatter.processPhoneNumber(phoneNumber, Encoding.HEX, encrypter);
         } catch (IllegalArgumentException iae) {
           // Skips invalid input.
           continue;
         }
-        // Hashes the normalized phone number.
-        byte[] phoneNumberHash = userDataFormatter.hashString(normalizedPhoneNumber);
-        // Encrypts the email hash.
-        byte[] encryptedPhoneNumber = encryptHash(phoneNumberHash, encrypter, userDataFormatter);
-        // Encodes the encrypted phone number hash using hex encoding.
-        String encodedEncryptedPhoneNumber = userDataFormatter.hexEncode(encryptedPhoneNumber);
         // Sets the phone number identifier to the encoded encrypted phone number.
         userDataBuilder.addUserIdentifiers(
-            UserIdentifier.newBuilder().setPhoneNumber(encodedEncryptedPhoneNumber));
+            UserIdentifier.newBuilder().setPhoneNumber(processedPhoneNumber));
       }
 
       if (userDataBuilder.getUserIdentifiersCount() > 0) {
@@ -226,44 +227,41 @@ public class IngestAudienceMembersWithEncryption {
                         userDataFormatter.base64Encode(encrypter.getEncryptedDek().toByteArray())))
             .build();
 
-    IngestAudienceMembersRequest request =
-        IngestAudienceMembersRequest.newBuilder()
-            .addDestinations(destinationBuilder)
-            .addAllAudienceMembers(audienceMembers)
-            .setConsent(
-                Consent.newBuilder()
-                    .setAdPersonalization(ConsentStatus.CONSENT_GRANTED)
-                    .setAdUserData(ConsentStatus.CONSENT_GRANTED))
-            // Sets validate_only to true to validate but not apply the changes in the request.
-            .setValidateOnly(true)
-            .setTermsOfService(
-                TermsOfService.newBuilder()
-                    .setCustomerMatchTermsOfServiceStatus(TermsOfServiceStatus.ACCEPTED))
-            // Sets encryption info on the request.
-            .setEncryptionInfo(encryptionInfo)
-            // Sets encoding to hex encoding since that was used to encode the encrypted values.
-            .setEncoding(Encoding.HEX)
-            .build();
-
     try (IngestionServiceClient ingestionServiceClient = IngestionServiceClient.create()) {
-      IngestAudienceMembersResponse response =
-          ingestionServiceClient.ingestAudienceMembers(request);
-      LOGGER.info(String.format("Response:%n%s", response));
-    }
-  }
+      int requestCount = 0;
+      // Batches requests to send up to the maximum number of audience members per request.
+      for (List<AudienceMember> audienceMembersBatch :
+          Lists.partition(audienceMembers, MAX_MEMBERS_PER_REQUEST)) {
+        requestCount++;
+        IngestAudienceMembersRequest request =
+            IngestAudienceMembersRequest.newBuilder()
+                .addDestinations(destinationBuilder)
+                // Adds members from the current batch.
+                .addAllAudienceMembers(audienceMembersBatch)
+                .setConsent(
+                    Consent.newBuilder()
+                        .setAdPersonalization(ConsentStatus.CONSENT_GRANTED)
+                        .setAdUserData(ConsentStatus.CONSENT_GRANTED))
+                // Sets validate_only. If true, then the Data Manager API only validates the request
+                // but doesn't apply changes.
+                .setValidateOnly(params.validateOnly)
+                .setTermsOfService(
+                    TermsOfService.newBuilder()
+                        .setCustomerMatchTermsOfServiceStatus(TermsOfServiceStatus.ACCEPTED))
+                // Sets encryption info on the request.
+                .setEncryptionInfo(encryptionInfo)
+                // Sets encoding to hex encoding since that was used to encode the encrypted values.
+                .setEncoding(com.google.ads.datamanager.v1.Encoding.HEX)
+                .build();
 
-  /**
-   * Encrypts the provided {@code hashBytes}.
-   *
-   * @param hashBytes the hash bytes to encrypt
-   * @param encrypter the {@link Encrypter} instance
-   * @return the encrypted value as a byte array
-   */
-  private byte[] encryptHash(byte[] hashBytes, Encrypter encrypter, UserDataFormatter formatter) {
-    // Encodes the hash using Base64 encoding.
-    String encodedHash = formatter.base64Encode(hashBytes);
-    // Encrypts the Base64-encoded hash.
-    return encrypter.encrypt(encodedHash);
+        IngestAudienceMembersResponse response =
+            ingestionServiceClient.ingestAudienceMembers(request);
+        if (LOGGER.isLoggable(Level.INFO)) {
+          LOGGER.info(String.format("Response for request #%d:%n%s", requestCount, response));
+        }
+      }
+      LOGGER.info("# of requests sent: " + requestCount);
+    }
   }
 
   /** Data object for a single row of input data. */

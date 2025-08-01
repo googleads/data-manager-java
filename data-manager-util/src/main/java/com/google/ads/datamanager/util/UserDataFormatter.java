@@ -27,6 +27,28 @@ import javax.annotation.concurrent.NotThreadSafe;
 /**
  * Utility for normalizing and formatting user data.
  *
+ * <p>Methods fall into two categories:
+ *
+ * <ol>
+ *   <li><em>Convenience methods</em> named {@code process...(...)} that handle <em>all</em>
+ *       formatting, hashing and encoding of a specific type of data in one method call. Each of
+ *       these methods is overloaded with a signature that also accepts an {@link Encrypter}
+ *       instance that encrypts the data after formatting and hashing.
+ *   <li><em>Fine-grained methods</em> such as {@code format...(...)}, encoding, and hashing methods
+ *       that perform a specific data processing step.
+ * </ol>
+ *
+ * <p>Using the convenience methods is easier, less error-prone, and more concise. For example,
+ * compare the two approaches to format, hash, and encode an email address:
+ *
+ * <pre>
+ *   // Uses a convenience method.
+ *   String result1 = formatter.processEmailAddress(emailAddress, Encoding.HEX);
+ *
+ *   // Uses a chain of fine-grained method calls.
+ *   String result = formatter.hexEncode(formatter.hashString(formatter.formatEmailAddress(emailAddress)))
+ * </pre>
+ *
  * <p>Methods throw {@link IllegalArgumentException} when passed invalid input. Since arguments to
  * these methods contain user data, exception messages <em>don't</em> include the argument values.
  *
@@ -60,8 +82,8 @@ public class UserDataFormatter {
   private static final Pattern GIVEN_NAME_PREFIX_PATTERN =
       Pattern.compile("(?:mr|mrs|ms|dr)\\.(?:\\s|$)");
 
-  /** Pattern that matches all suffixes for a last name. */
-  private static final Pattern LAST_NAME_SUFFIX_PATTERN =
+  /** Pattern that matches all suffixes for a family name. */
+  private static final Pattern FAMILY_NAME_SUFFIX_PATTERN =
       Pattern.compile(
           "(?:,\\s*|\\s+)(?:jr\\.|sr\\.|2nd|3rd|ii|iii|iv|v|vi|cpa|dc|dds|vm|jd|md|phd)\\s?$");
 
@@ -70,6 +92,11 @@ public class UserDataFormatter {
 
   private UserDataFormatter(MessageDigest sha256Digest) {
     this.sha256Digest = sha256Digest;
+  }
+
+  public enum Encoding {
+    HEX,
+    BASE64;
   }
 
   /** Returns a new instance. */
@@ -174,26 +201,26 @@ public class UserDataFormatter {
   }
 
   /**
-   * Returns the provided last name, normalized and formatted.
+   * Returns the provided family name, normalized and formatted.
    *
-   * @param lastName the last name to format
-   * @throws IllegalArgumentException if {@code lastName} is invalid. Examples of an invalid value
+   * @param familyName the family name to format
+   * @throws IllegalArgumentException if {@code familyName} is invalid. Examples of an invalid value
    *     include a {@code null}, blank, or empty string, or a name that consists only of a suffix
    *     such as "Jr.".
    */
-  public String formatLastName(String lastName) {
-    Preconditions.checkArgument(lastName != null, "Null last name");
-    lastName = lastName.trim();
-    Preconditions.checkArgument(!lastName.isEmpty(), "Empty or blank last name");
-    lastName = lastName.toLowerCase(LOCALE);
+  public String formatFamilyName(String familyName) {
+    Preconditions.checkArgument(familyName != null, "Null family name");
+    familyName = familyName.trim();
+    Preconditions.checkArgument(!familyName.isEmpty(), "Empty or blank family name");
+    familyName = familyName.toLowerCase(LOCALE);
 
     // Uses a loop to handle the case where there are multiple suffixes, such as ", Jr., DDS".
     Matcher matcher;
-    while ((matcher = LAST_NAME_SUFFIX_PATTERN.matcher(lastName)).find()) {
-      lastName = matcher.replaceAll("");
+    while ((matcher = FAMILY_NAME_SUFFIX_PATTERN.matcher(familyName)).find()) {
+      familyName = matcher.replaceAll("");
     }
-    Preconditions.checkArgument(!lastName.isEmpty(), "Last name consists solely of a suffix");
-    return lastName;
+    Preconditions.checkArgument(!familyName.isEmpty(), "Family name consists solely of a suffix");
+    return familyName;
   }
 
   /**
@@ -271,5 +298,217 @@ public class UserDataFormatter {
     Preconditions.checkArgument(bytes != null, "Null byte array");
     Preconditions.checkArgument(bytes.length > 0, "Empty byte array");
     return base64Encoder.encode(bytes);
+  }
+
+  /**
+   * Formats the email address, hashes, and encodes using the specified encoding.
+   *
+   * <p>This is a convenience method that combines {@link #formatEmailAddress(String)}, {@link
+   * #hashString(String)}, and either {@link #hexEncode(byte[])} or {@link #base64Encode(byte[])}
+   * into a single call.
+   *
+   * @return the email address, formatted, hashed, and encoded for the {@code
+   *     UserIdentifier.email_address} field in the API.
+   * @throws IllegalArgumentException if the email address is invalid
+   */
+  public String processEmailAddress(String email, Encoding encoding) {
+    return hashAndEncode(formatEmailAddress(email), encoding);
+  }
+
+  /**
+   * Formats the email address, hashes, base 64-encodes, encrypts, and encodes using the specified
+   * encoding.
+   *
+   * <p>This is a convenience method that combines {@link #formatEmailAddress(String)}, {@link
+   * #hashString(String)}, {@link #base64Encode(byte[])}, {@link Encrypter#encrypt(String)}, and
+   * either {@link #hexEncode(byte[])} or {@link #base64Encode(byte[])} into a single call.
+   *
+   * @return the email address, formatted, hashed, encrypted, and encoded for the {@code
+   *     UserIdentifier.email_address} field in the API.
+   * @throws IllegalArgumentException if the email address is invalid
+   * @throws NullPointerException if {@code encrypter} is null
+   */
+  public String processEmailAddress(String email, Encoding encoding, Encrypter encrypter) {
+    Preconditions.checkNotNull(encrypter, "Null encrypter");
+    return hashEncodeAndEncrypt(formatEmailAddress(email), encoding, encrypter);
+  }
+
+  /**
+   * Formats the phone number, hashes, and encodes using the specified encoding.
+   *
+   * <p>This is a convenience method that combines {@link #formatPhoneNumber(String)}, {@link
+   * #hashString(String)}, and either {@link #hexEncode(byte[])} or {@link #base64Encode(byte[])}
+   * into a single call.
+   *
+   * @return the phone number, formatted, hashed, and encoded for the {@code
+   *     UserIdentifier.phone_number} field in the API.
+   * @throws IllegalArgumentException if the phone number is invalid
+   */
+  public String processPhoneNumber(String phoneNumber, Encoding encoding) {
+    return hashAndEncode(formatPhoneNumber(phoneNumber), encoding);
+  }
+
+  /**
+   * Formats the phone number, hashes, base 64-encodes, encrypts, and encodes using the specified
+   * encoding.
+   *
+   * <p>This is a convenience method that combines {@link #formatPhoneNumber(String)}, {@link
+   * #hashString(String)}, {@link #base64Encode(byte[])}, {@link Encrypter#encrypt(String)}, and
+   * either {@link #hexEncode(byte[])} or {@link #base64Encode(byte[])} into a single call.
+   *
+   * @return the phone number, formatted, hashed, encrypted, and encoded for the {@code
+   *     UserIdentifier.phone_number} field in the API.
+   * @throws IllegalArgumentException if the phone number is invalid
+   * @throws NullPointerException if {@code encrypter} is null
+   */
+  public String processPhoneNumber(String phoneNumber, Encoding encoding, Encrypter encrypter) {
+    return hashEncodeAndEncrypt(formatPhoneNumber(phoneNumber), encoding, encrypter);
+  }
+
+  /**
+   * Formats the given name, hashes, and encodes using the specified encoding.
+   *
+   * <p>This is a convenience method that combines {@link #formatGivenName(String)}, {@link
+   * #hashString(String)}, and either {@link #hexEncode(byte[])} or {@link #base64Encode(byte[])}
+   * into a single call.
+   *
+   * @throws IllegalArgumentException if the given name is invalid
+   * @return the given name, formatted, hashed, and encoded for the {@code AddressInfo.given_name}
+   *     field in the API.
+   */
+  public String processGivenName(String givenName, Encoding encoding) {
+    return hashAndEncode(formatGivenName(givenName), encoding);
+  }
+
+  /**
+   * Formats the given name, hashes, base 64-encodes, encrypts, and encodes using the specified
+   * encoding.
+   *
+   * <p>This is a convenience method that combines {@link #formatGivenName(String)}, {@link
+   * #hashString(String)}, {@link #base64Encode(byte[])}, {@link Encrypter#encrypt(String)}, and
+   * either {@link #hexEncode(byte[])} or {@link #base64Encode(byte[])} into a single call.
+   *
+   * @return the given name, formatted, hashed, encrypted, and encoded for the {@code
+   *     AddressInfo.given_name} field in the API.
+   * @throws IllegalArgumentException if the given name is invalid
+   * @throws NullPointerException if {@code encrypter} is null
+   */
+  public String processGivenName(String givenName, Encoding encoding, Encrypter encrypter) {
+    return hashAndEncode(formatGivenName(givenName), encoding);
+  }
+
+  /**
+   * Formats the family name, hashes, and encodes using the specified encoding.
+   *
+   * <p>This is a convenience method that combines {@link #formatFamilyName(String)}, {@link
+   * #hashString(String)}, and either {@link #hexEncode(byte[])} or {@link #base64Encode(byte[])}
+   * into a single call.
+   *
+   * @throws IllegalArgumentException if the family name is invalid
+   * @return the family name, formatted, hashed, and encoded for the {@code AddressInfo.family_name}
+   *     field in the API.
+   */
+  public String processFamilyName(String givenName, Encoding encoding) {
+    return hashAndEncode(formatFamilyName(givenName), encoding);
+  }
+
+  /**
+   * Formats the family name, hashes, base 64-encodes, encrypts, and encodes using the specified
+   * encoding.
+   *
+   * <p>This is a convenience method that combines {@link #formatFamilyName(String)}, {@link
+   * #hashString(String)}, {@link #base64Encode(byte[])}, {@link Encrypter#encrypt(String)}, and
+   * either {@link #hexEncode(byte[])} or {@link #base64Encode(byte[])} into a single call.
+   *
+   * @return the family name, formatted, hashed, encrypted, and encoded for the {@code
+   *     AddressInfo.family_name} field in the API.
+   * @throws IllegalArgumentException if the family name is invalid
+   * @throws NullPointerException if {@code encrypter} is null
+   */
+  public String processFamilyName(String givenName, Encoding encoding, Encrypter encrypter) {
+    return hashAndEncode(formatFamilyName(givenName), encoding);
+  }
+
+  /**
+   * Processes the region code.
+   *
+   * <p>This is a convenience method that simply calls {@link #formatRegionCode(String)}. This
+   * method exists for consistency so that all data types have a {@code process...} method.
+   *
+   * <p>Doesn't require an {@link Encoding} since region codes shouldn't be encoded or hashed.
+   *
+   * <p>There is no overloaded counterpart that takes an {@link Encrypter} since region codes
+   * shouldn't be encrypted.
+   *
+   * @return the region code, formatted for the {@code AddressInfo.region_code} field in the API.
+   * @throws IllegalArgumentException if the region code is invalid
+   */
+  public String processRegionCode(String regionCode) {
+    return formatRegionCode(regionCode);
+  }
+
+  /**
+   * Processes the postal code.
+   *
+   * <p>This is a convenience method that simply calls {@link #formatPostalCode(String)}. This
+   * method exists for consistency so that all data types have a {@code process...} method.
+   *
+   * <p>Doesn't require an {@link Encoding} since postal codes shouldn't be encoded or hashed.
+   *
+   * <p>There is no overloaded counterpart that takes an {@link Encrypter} since postal codes
+   * shouldn't be encrypted.
+   *
+   * @return the region code, formatted for the {@code AddressInfo.postal_code} field in the API.
+   * @throws IllegalArgumentException if the postal code is invalid
+   */
+  public String processPostalCode(String postalCode) {
+    return formatPostalCode(postalCode);
+  }
+
+  /**
+   * Hashes the string and then encodes using the specified encoding.
+   *
+   * @param normalizedString a string that has already been normalized
+   * @param encoding the encoding to use
+   */
+  private String hashAndEncode(String normalizedString, Encoding encoding) {
+    byte[] hashBytes = hashString(normalizedString);
+    return encode(hashBytes, encoding);
+  }
+
+  /**
+   * Hashes the string, encodes for encryption, encrypts, and then encodes using the specified
+   * encoding.
+   *
+   * @param normalizedString a string that has already been normalized
+   * @param encoding the encoding to use
+   * @param encrypter the Encrypter to use
+   */
+  private String hashEncodeAndEncrypt(
+      String normalizedString, Encoding encoding, Encrypter encrypter) {
+    Preconditions.checkNotNull(encrypter, "Null encrypter");
+    // Hashes the string and encodes using Base64, as required by the Data Manager API.
+    String hashBase64 = hashAndEncode(normalizedString, Encoding.BASE64);
+    // Encrypts the base64-encoded hash.
+    byte[] encryptedHashHex = encrypter.encrypt(hashBase64);
+    // Encodes the encryption output using the specified encoding.
+    return encode(encryptedHashHex, encoding);
+  }
+
+  /**
+   * Returns the bytes encoded using the specified encoding.
+   *
+   * @throws IllegalArgumentException if the bytes are null or empty, or if the encoding is not
+   *     recognized
+   */
+  private String encode(byte[] bytes, Encoding encoding) {
+    switch (encoding) {
+      case HEX:
+        return hexEncode(bytes);
+      case BASE64:
+        return base64Encode(bytes);
+      default:
+        throw new IllegalArgumentException("Invalid encoding: " + encoding);
+    }
   }
 }

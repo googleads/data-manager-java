@@ -17,6 +17,7 @@ package com.google.ads.datamanager.util;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThrows;
 
+import com.google.ads.datamanager.util.UserDataFormatter.Encoding;
 import com.google.common.io.BaseEncoding;
 import java.nio.charset.StandardCharsets;
 import java.util.function.Function;
@@ -128,44 +129,46 @@ public class UserDataFormatterTest {
   }
 
   @Test
-  public void testFormatLastName_validInputs() {
-    assertEquals("quinn", formatter.formatLastName(" Quinn   "));
-    assertEquals("Hyphenated name", "quinn-alex", formatter.formatLastName("Quinn-Alex"));
+  public void testFormatFamilyName_validInputs() {
+    assertEquals("quinn", formatter.formatFamilyName(" Quinn   "));
+    assertEquals("Hyphenated name", "quinn-alex", formatter.formatFamilyName("Quinn-Alex"));
     assertEquals(
         "Contains 'jr.' as a suffix with preceding comma",
         "quinn",
-        formatter.formatLastName(" Quinn, Jr.   "));
+        formatter.formatFamilyName(" Quinn, Jr.   "));
     assertEquals(
         "Contains 'jr.' as a suffix with preceding comma",
         "quinn",
-        formatter.formatLastName(" Quinn,Jr.   "));
-    assertEquals("Contains 'sr.' as a suffix", "quinn", formatter.formatLastName(" Quinn Sr.  "));
-    assertEquals("Contains multiple suffixes", "quinn", formatter.formatLastName("quinn, jr. dds"));
+        formatter.formatFamilyName(" Quinn,Jr.   "));
+    assertEquals("Contains 'sr.' as a suffix", "quinn", formatter.formatFamilyName(" Quinn Sr.  "));
     assertEquals(
-        "Contains multiple suffixes", "quinn", formatter.formatLastName("quinn, jr., dds"));
+        "Contains multiple suffixes", "quinn", formatter.formatFamilyName("quinn, jr. dds"));
+    assertEquals(
+        "Contains multiple suffixes", "quinn", formatter.formatFamilyName("quinn, jr., dds"));
     assertEquals(
         "Ends with suffix characters that aren't a suffix",
         "boardds",
-        formatter.formatLastName("Boardds"));
+        formatter.formatFamilyName("Boardds"));
     assertEquals(
         "Contains suffix character 'cpa' in the middle",
         "lacparm",
-        formatter.formatLastName("lacparm"));
+        formatter.formatFamilyName("lacparm"));
   }
 
   @Test
-  public void testFormatLastName_invalidInput_throwsException() {
+  public void testFormatFamilyName_invalidInput_throwsException() {
     assertThrows(
-        "Null given name", IllegalArgumentException.class, () -> formatter.formatLastName(null));
-    assertThrows("Empty name", IllegalArgumentException.class, () -> formatter.formatLastName(" "));
+        "Null given name", IllegalArgumentException.class, () -> formatter.formatFamilyName(null));
     assertThrows(
-        "Last name that only contains a suffix",
+        "Empty name", IllegalArgumentException.class, () -> formatter.formatFamilyName(" "));
+    assertThrows(
+        "Family name that only contains a suffix",
         IllegalArgumentException.class,
-        () -> formatter.formatLastName(", Jr. "));
+        () -> formatter.formatFamilyName(", Jr. "));
     assertThrows(
-        "Last name that only contains multiple suffixes",
+        "Family name that only contains multiple suffixes",
         IllegalArgumentException.class,
-        () -> formatter.formatLastName(",Jr.,DDS "));
+        () -> formatter.formatFamilyName(",Jr.,DDS "));
   }
 
   @Test
@@ -271,5 +274,95 @@ public class UserDataFormatterTest {
     assertEquals("YWNLMTIz", formatter.base64Encode("acK123".getBytes(StandardCharsets.UTF_8)));
     assertEquals(
         "OTk5X1hZWg==", formatter.base64Encode("999_XYZ".getBytes(StandardCharsets.UTF_8)));
+  }
+
+  @Test
+  public void testProcessEmailAddress_validInputs_hexEncoding() {
+    final String encodedHash = "509E933019BB285A134A9334B8BB679DFF79D0CE023D529AF4BD744D47B4FD8A";
+    String[] variants = {
+      "alexz@example.com",
+      "  alexz@example.com",
+      "  alexz@example.com",
+      "  ALEXZ@example.com   ",
+      "  alexz@EXAMPLE.com   ",
+    };
+    for (String emailVariant : variants) {
+      assertEquals(encodedHash, formatter.processEmailAddress(emailVariant, Encoding.HEX));
+    }
+  }
+
+  @Test
+  public void testProcessEmailAddress_validInputs_base64Encoding() {
+    final String encodedHash = "UJ6TMBm7KFoTSpM0uLtnnf950M4CPVKa9L10TUe0/Yo=";
+    String[] variants = {
+      "alexz@example.com",
+      "  alexz@example.com",
+      "  alexz@example.com",
+      "  ALEXZ@example.com   ",
+      "  alexz@EXAMPLE.com   ",
+    };
+    for (String emailVariant : variants) {
+      assertEquals(encodedHash, formatter.processEmailAddress(emailVariant, Encoding.BASE64));
+    }
+  }
+
+  @Test
+  public void testProcessPhoneNumber_validInputs_hexEncoding() {
+    final String encodedHash = "FB4F73A6EC5FDB7077D564CDD22C3554B43CE49168550C3B12C547B78C517B30";
+    assertEquals(encodedHash, formatter.processPhoneNumber("+18005550100", Encoding.HEX));
+    assertEquals(encodedHash, formatter.processPhoneNumber("   +1-800-555-0100", Encoding.HEX));
+    assertEquals(encodedHash, formatter.processPhoneNumber("1-800-555-0100   ", Encoding.HEX));
+  }
+
+  @Test
+  public void testProcessPhoneNumber_validInputs_base64Encoding() {
+    final String encodedHash = "+09zpuxf23B31WTN0iw1VLQ85JFoVQw7EsVHt4xRezA=";
+    assertEquals(encodedHash, formatter.processPhoneNumber("+18005550100", Encoding.BASE64));
+    assertEquals(encodedHash, formatter.processPhoneNumber("   +1-800-555-0100", Encoding.BASE64));
+    assertEquals(encodedHash, formatter.processPhoneNumber("1-800-555-0100   ", Encoding.BASE64));
+  }
+
+  @Test
+  public void testProcessGivenName_validInputs_hexEncoding() {
+    // Hex-encoded hash of "givenname".
+    final String encodedHash = "128A07BFE2DF877C52076E60D7774CF5BAAA046C5A6C48DAF30FF43ECCA2F814";
+    assertEquals(encodedHash, formatter.processFamilyName("Givenname", Encoding.HEX));
+    assertEquals(encodedHash, formatter.processFamilyName("  GivenName  ", Encoding.HEX));
+  }
+
+  @Test
+  public void testProcessGivenName_validInputs_base64Encoding() {
+    // Base64-encoded hash of "givenname".
+    final String encodedHash = "EooHv+Lfh3xSB25g13dM9bqqBGxabEja8w/0Psyi+BQ=";
+    assertEquals(encodedHash, formatter.processFamilyName("Givenname", Encoding.BASE64));
+    assertEquals(encodedHash, formatter.processFamilyName("  GivenName  ", Encoding.BASE64));
+  }
+
+  @Test
+  public void testProcessFamilyName_validInputs_hexEncoding() {
+    // Hex-encoded hash of "familyname".
+    final String encodedHash = "77762C287E61CE065BEE5C15464012C6FBE088398B8057627D5577249430D574";
+    assertEquals(encodedHash, formatter.processFamilyName("Familyname", Encoding.HEX));
+    assertEquals(encodedHash, formatter.processFamilyName("  FamilyName ", Encoding.HEX));
+  }
+
+  @Test
+  public void testProcessFamilyName_validInputs_base64Encoding() {
+    // Base64-encoded hash of "familyname".
+    final String encodedHash = "d3YsKH5hzgZb7lwVRkASxvvgiDmLgFdifVV3JJQw1XQ=";
+    assertEquals(encodedHash, formatter.processFamilyName("Familyname", Encoding.BASE64));
+    assertEquals(encodedHash, formatter.processFamilyName("  FamilyName ", Encoding.BASE64));
+  }
+
+  @Test
+  public void testProcessRegionCode_validInputs() {
+    assertEquals("US", formatter.formatRegionCode(" us"));
+    assertEquals("US", formatter.formatRegionCode(" uS "));
+  }
+
+  @Test
+  public void testProcessPostalCode_validInputs() {
+    assertEquals("1229-076", formatter.formatPostalCode("1229-076"));
+    assertEquals("1229-076", formatter.formatPostalCode(" 1229-076  "));
   }
 }

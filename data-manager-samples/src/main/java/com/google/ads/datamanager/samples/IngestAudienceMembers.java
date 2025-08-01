@@ -17,11 +17,11 @@ package com.google.ads.datamanager.samples;
 import com.beust.jcommander.Parameter;
 import com.google.ads.datamanager.samples.common.BaseParamsConfig;
 import com.google.ads.datamanager.util.UserDataFormatter;
+import com.google.ads.datamanager.util.UserDataFormatter.Encoding;
 import com.google.ads.datamanager.v1.AudienceMember;
 import com.google.ads.datamanager.v1.Consent;
 import com.google.ads.datamanager.v1.ConsentStatus;
 import com.google.ads.datamanager.v1.Destination;
-import com.google.ads.datamanager.v1.Encoding;
 import com.google.ads.datamanager.v1.IngestAudienceMembersRequest;
 import com.google.ads.datamanager.v1.IngestAudienceMembersResponse;
 import com.google.ads.datamanager.v1.IngestionServiceClient;
@@ -31,11 +31,13 @@ import com.google.ads.datamanager.v1.TermsOfService;
 import com.google.ads.datamanager.v1.TermsOfServiceStatus;
 import com.google.ads.datamanager.v1.UserData;
 import com.google.ads.datamanager.v1.UserIdentifier;
+import com.google.common.collect.Lists;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -46,6 +48,9 @@ import java.util.logging.Logger;
  */
 public class IngestAudienceMembers {
   private static final Logger LOGGER = Logger.getLogger(IngestAudienceMembers.class.getName());
+
+  /** The maximum number of audience members allowed per request. */
+  private static final int MAX_MEMBERS_PER_REQUEST = 10_000;
 
   private static final class ParamsConfig extends BaseParamsConfig<ParamsConfig> {
 
@@ -93,6 +98,13 @@ public class IngestAudienceMembers {
         required = true,
         description = "Comma-separated file containing user data to ingest")
     String csvFile;
+
+    @Parameter(
+        names = "--validateOnly",
+        required = false,
+        arity = 1,
+        description = "Whether to enable validateOnly on the request")
+    boolean validateOnly = true;
   }
 
   public static void main(String[] args) throws IOException {
@@ -109,7 +121,7 @@ public class IngestAudienceMembers {
   }
 
   /**
-   * Runs the example. This sample assumes that the login and operating account are the same.
+   * Runs the example.
    *
    * @param params the parameters for the example
    */
@@ -127,38 +139,30 @@ public class IngestAudienceMembers {
 
       // Adds a UserIdentifier for each valid email address for the member.
       for (String email : member.emailAddresses) {
-        String normalizedEmail;
+        String processedEmail;
         try {
-          normalizedEmail = userDataFormatter.formatEmailAddress(email);
+          processedEmail = userDataFormatter.processEmailAddress(email, Encoding.HEX);
         } catch (IllegalArgumentException iae) {
           // Skips invalid input.
           continue;
         }
-        // Hashes the normalized email address.
-        byte[] emailHash = userDataFormatter.hashString(normalizedEmail);
-        // Hex encodes the hash.
-        String encodedEmailHash = userDataFormatter.hexEncode(emailHash);
         // Sets the email address identifier to the encoded email hash.
         userDataBuilder.addUserIdentifiers(
-            UserIdentifier.newBuilder().setEmailAddress(encodedEmailHash));
+            UserIdentifier.newBuilder().setEmailAddress(processedEmail));
       }
 
       // Adds a UserIdentifier for each valid phone number for the member.
       for (String phoneNumber : member.phoneNumbers) {
-        String normalizedPhoneNumber;
+        String processedPhoneNumber;
         try {
-          normalizedPhoneNumber = userDataFormatter.formatPhoneNumber(phoneNumber);
+          processedPhoneNumber = userDataFormatter.processPhoneNumber(phoneNumber, Encoding.HEX);
         } catch (IllegalArgumentException iae) {
           // Skips invalid input.
           continue;
         }
-        // Hashes the normalized phone number.
-        byte[] phoneNumberHash = userDataFormatter.hashString(normalizedPhoneNumber);
-        // Hex encodes the hash.
-        String encodedPhoneNumberHash = userDataFormatter.hexEncode(phoneNumberHash);
         // Sets the phone number identifier to the encoded phone number hash.
         userDataBuilder.addUserIdentifiers(
-            UserIdentifier.newBuilder().setPhoneNumber(encodedPhoneNumberHash));
+            UserIdentifier.newBuilder().setPhoneNumber(processedPhoneNumber));
       }
 
       if (userDataBuilder.getUserIdentifiersCount() > 0) {
@@ -187,28 +191,39 @@ public class IngestAudienceMembers {
               .setAccountId(params.linkedAccountId));
     }
 
-    // Builds the request.
-    IngestAudienceMembersRequest request =
-        IngestAudienceMembersRequest.newBuilder()
-            .addDestinations(destinationBuilder)
-            .addAllAudienceMembers(audienceMembers)
-            .setConsent(
-                Consent.newBuilder()
-                    .setAdPersonalization(ConsentStatus.CONSENT_GRANTED)
-                    .setAdUserData(ConsentStatus.CONSENT_GRANTED))
-            // Sets validate_only to true to validate but not apply the changes in the request.
-            .setValidateOnly(true)
-            // Sets encoding to match the encoding used.
-            .setEncoding(Encoding.HEX)
-            .setTermsOfService(
-                TermsOfService.newBuilder()
-                    .setCustomerMatchTermsOfServiceStatus(TermsOfServiceStatus.ACCEPTED))
-            .build();
-
     try (IngestionServiceClient ingestionServiceClient = IngestionServiceClient.create()) {
-      IngestAudienceMembersResponse response =
-          ingestionServiceClient.ingestAudienceMembers(request);
-      LOGGER.info(() -> String.format("Response:%n%s", response));
+      int requestCount = 0;
+      // Batches requests to send up to the maximum number of audience members per request.
+      for (List<AudienceMember> audienceMembersBatch :
+          Lists.partition(audienceMembers, MAX_MEMBERS_PER_REQUEST)) {
+        requestCount++;
+        // Builds the request.
+        IngestAudienceMembersRequest request =
+            IngestAudienceMembersRequest.newBuilder()
+                .addDestinations(destinationBuilder)
+                // Adds members from the current batch.
+                .addAllAudienceMembers(audienceMembersBatch)
+                .setConsent(
+                    Consent.newBuilder()
+                        .setAdPersonalization(ConsentStatus.CONSENT_GRANTED)
+                        .setAdUserData(ConsentStatus.CONSENT_GRANTED))
+                // Sets validate_only. If true, then the Data Manager API only validates the request
+                // but doesn't apply changes.
+                .setValidateOnly(params.validateOnly)
+                // Sets encoding to match the encoding used.
+                .setEncoding(com.google.ads.datamanager.v1.Encoding.HEX)
+                .setTermsOfService(
+                    TermsOfService.newBuilder()
+                        .setCustomerMatchTermsOfServiceStatus(TermsOfServiceStatus.ACCEPTED))
+                .build();
+
+        IngestAudienceMembersResponse response =
+            ingestionServiceClient.ingestAudienceMembers(request);
+        if (LOGGER.isLoggable(Level.INFO)) {
+          LOGGER.info(String.format("Response for request #%d:%n%s", requestCount, response));
+        }
+      }
+      LOGGER.info("# of requests sent: " + requestCount);
     }
   }
 

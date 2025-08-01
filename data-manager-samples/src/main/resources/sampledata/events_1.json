@@ -1,0 +1,53 @@
+[
+  {
+    "timestamp": "2025-06-05T23:10:12-05:00",
+    "transactionId": "ABC1234567",
+    "value": 5.31,
+    "currency": "USD",
+    "emails": [
+      "dana@example.com",
+      "DanaM@example.com"
+    ]
+  },
+  {
+    "timestamp": "2025-06-06T16:45:09.333Z",
+    "transactionId": "DEF987654321",
+    "value": 1.99,
+    "currency": "USD",
+    "gclid": "GCLID123",
+    "emails": [
+      "ALEXF@example.com",
+      "AlexF@cymbalgroup.com",
+      "alexF@altostrat.com"
+    ],
+    "phoneNumbers": [
+      "+1-800-555-0100",
+      "+1 800-555-0101",
+      "+1 800-555-0102"
+    ]
+  },
+  {
+    "timestamp": "2025-06-05T11:42:17.177+03:00",
+    "transactionId": "GHI5656565656",
+    "value": 0.52,
+    "currency": "EUR",
+    "gclid": "GCLID456",
+    "emails": [
+      "quinn@CYMBALGROUP.com",
+      "baklavainthebalkans@gmail.com"
+    ]
+  },
+  {
+    "timestamp": "2025-06-06T09:22:16Z",
+    "transactionId": "JKL333333333",
+    "value": 3.99,
+    "currency": "GBP",
+    "emails": [
+      "rosario@example.org",
+      "cloudySanFrancisco@GMAIL.com"
+    ],
+    "phoneNumbers": [
+      "+1-800-555-0110"
+    ]
+  }
+]

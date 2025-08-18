@@ -150,10 +150,15 @@ public class IngestEvents {
       eventBuilder.setTransactionId(eventRecord.transactionId);
 
       if (!Strings.isNullOrEmpty(eventRecord.gclid)) {
-        eventBuilder
-            .setCurrency(eventRecord.currency)
-            .setConversionValue(eventRecord.value)
-            .setAdIdentifiers(AdIdentifiers.newBuilder().setGclid(eventRecord.gclid));
+        eventBuilder.setAdIdentifiers(AdIdentifiers.newBuilder().setGclid(eventRecord.gclid));
+      }
+
+      if (!Strings.isNullOrEmpty(eventRecord.currency)) {
+        eventBuilder.setCurrency(eventRecord.currency);
+      }
+
+      if (eventRecord.value != null) {
+        eventBuilder.setConversionValue(eventRecord.value);
       }
 
       UserData.Builder userDataBuilder = UserData.newBuilder();

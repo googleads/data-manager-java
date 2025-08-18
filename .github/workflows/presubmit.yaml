@@ -1,0 +1,25 @@
+# Gives read-only access
+permissions: read-all
+name: Presubmit
+on:
+  pull_request:
+    branches:
+      - main
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    # TODO(jradcliff): Determine how to prevent this from running unless the PR
+    # label was added by a user in CODEOWNERS.
+    if: contains(github.event.pull_request.labels.*.name, 'run-presubmit')
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v4
+    - name: Set up Java
+      uses: actions/setup-java@v4
+      with:
+        java-version: '11'
+        distribution: 'temurin'
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v4
+    - name: Build with Gradle
+      run: ./gradlew build

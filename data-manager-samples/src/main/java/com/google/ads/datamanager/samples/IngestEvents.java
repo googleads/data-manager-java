@@ -19,8 +19,6 @@ import com.google.ads.datamanager.samples.common.BaseParamsConfig;
 import com.google.ads.datamanager.util.UserDataFormatter;
 import com.google.ads.datamanager.util.UserDataFormatter.Encoding;
 import com.google.ads.datamanager.v1.AdIdentifiers;
-import com.google.ads.datamanager.v1.Consent;
-import com.google.ads.datamanager.v1.ConsentStatus;
 import com.google.ads.datamanager.v1.Destination;
 import com.google.ads.datamanager.v1.Event;
 import com.google.ads.datamanager.v1.IngestEventsRequest;
@@ -53,6 +51,9 @@ import java.util.logging.Logger;
  */
 public class IngestEvents {
   private static final Logger LOGGER = Logger.getLogger(IngestEvents.class.getName());
+
+  /** The maximum number of events allowed per request. */
+  private static final int MAX_EVENTS_PER_REQUEST = 2_000;
 
   private static final class ParamsConfig extends BaseParamsConfig<ParamsConfig> {
 
@@ -103,6 +104,13 @@ public class IngestEvents {
         required = true,
         description = "JSON file containing user data to ingest")
     String jsonFile;
+
+    @Parameter(
+        names = "--validateOnly",
+        required = false,
+        arity = 1,
+        description = "Whether to enable validateOnly on the request")
+    boolean validateOnly = true;
   }
 
   public static void main(String[] args) throws IOException {
@@ -222,25 +230,34 @@ public class IngestEvents {
               .setAccountId(params.linkedAccountId));
     }
 
-    // Builds the request.
-    IngestEventsRequest request =
-        IngestEventsRequest.newBuilder()
-            .addDestinations(destinationBuilder)
-            .addAllEvents(events)
-            .setConsent(
-                Consent.newBuilder()
-                    .setAdPersonalization(ConsentStatus.CONSENT_GRANTED)
-                    .setAdUserData(ConsentStatus.CONSENT_GRANTED))
-            // Sets validate_only to true to validate but not apply the changes in the request.
-            .setValidateOnly(true)
-            // Sets encoding to match the encoding used.
-            .setEncoding(com.google.ads.datamanager.v1.Encoding.HEX)
-            .build();
-
     LOGGER.info(() -> String.format("Request:%n%s", request));
     try (IngestionServiceClient ingestionServiceClient = IngestionServiceClient.create()) {
-      IngestEventsResponse response = ingestionServiceClient.ingestEvents(request);
-      LOGGER.info(() -> String.format("Response:%n%s", response));
+      int requestCount = 0;
+      // Batches requests to send up to the maximum number of events per request.
+      for (List<Event> eventsBatch : Lists.partition(events, MAX_EVENTS_PER_REQUEST)) {
+        requestCount++;
+        // Builds the request.
+        IngestEventsRequest request =
+            IngestEventsRequest.newBuilder()
+                .addDestinations(destinationBuilder)
+                // Adds events from the current batch.
+                .addAllEvents(eventsBatch)
+                .setConsent(
+                    Consent.newBuilder()
+                        .setAdPersonalization(ConsentStatus.CONSENT_GRANTED)
+                        .setAdUserData(ConsentStatus.CONSENT_GRANTED))
+                // Sets validate_only. If true, then the Data Manager API only validates the request
+                // but doesn't apply changes.
+                .setValidateOnly(params.validateOnly)
+                // Sets encoding to match the encoding used.
+                .setEncoding(com.google.ads.datamanager.v1.Encoding.HEX)
+                .build();
+
+        IngestEventsResponse response = ingestionServiceClient.ingestEvents(request);
+        LOGGER.info(() -> String.format("Response for request #:%n%s", requestCount, response));
+      }
+
+      LOGGER.info("# of requests sent: " + requestCount);
     }
   }
 

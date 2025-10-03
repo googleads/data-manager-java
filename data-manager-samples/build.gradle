@@ -32,7 +32,7 @@ repositories {
 
 dependencies {
     api 'com.google.cloud:gapic-google-cloud-ads-datamanager-v1-java:0.1.0'
-    api platform('com.google.cloud:libraries-bom:26.65.0')
+    api platform('com.google.cloud:libraries-bom:26.69.0')
     api project(':data-manager-util')
     // Use JUnit test framework.
     testImplementation 'junit:junit:4.13.2'

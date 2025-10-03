@@ -19,6 +19,8 @@ import com.google.ads.datamanager.samples.common.BaseParamsConfig;
 import com.google.ads.datamanager.util.UserDataFormatter;
 import com.google.ads.datamanager.util.UserDataFormatter.Encoding;
 import com.google.ads.datamanager.v1.AdIdentifiers;
+import com.google.ads.datamanager.v1.Consent;
+import com.google.ads.datamanager.v1.ConsentStatus;
 import com.google.ads.datamanager.v1.Destination;
 import com.google.ads.datamanager.v1.Event;
 import com.google.ads.datamanager.v1.IngestEventsRequest;
@@ -29,6 +31,7 @@ import com.google.ads.datamanager.v1.ProductAccount;
 import com.google.ads.datamanager.v1.UserData;
 import com.google.ads.datamanager.v1.UserIdentifier;
 import com.google.common.base.Strings;
+import com.google.common.collect.Lists;
 import com.google.common.reflect.TypeToken;
 import com.google.gson.GsonBuilder;
 import com.google.protobuf.util.Timestamps;
@@ -230,7 +233,6 @@ public class IngestEvents {
               .setAccountId(params.linkedAccountId));
     }
 
-    LOGGER.info(() -> String.format("Request:%n%s", request));
     try (IngestionServiceClient ingestionServiceClient = IngestionServiceClient.create()) {
       int requestCount = 0;
       // Batches requests to send up to the maximum number of events per request.
@@ -253,8 +255,9 @@ public class IngestEvents {
                 .setEncoding(com.google.ads.datamanager.v1.Encoding.HEX)
                 .build();
 
+        LOGGER.info(() -> String.format("Request:%n%s", request));
         IngestEventsResponse response = ingestionServiceClient.ingestEvents(request);
-        LOGGER.info(() -> String.format("Response for request #:%n%s", requestCount, response));
+        LOGGER.info(String.format("Response for request #:%n%s", requestCount, response));
       }
 
       LOGGER.info("# of requests sent: " + requestCount);

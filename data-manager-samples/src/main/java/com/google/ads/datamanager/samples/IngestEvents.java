@@ -23,6 +23,7 @@ import com.google.ads.datamanager.v1.Consent;
 import com.google.ads.datamanager.v1.ConsentStatus;
 import com.google.ads.datamanager.v1.Destination;
 import com.google.ads.datamanager.v1.Event;
+import com.google.ads.datamanager.v1.EventSource;
 import com.google.ads.datamanager.v1.IngestEventsRequest;
 import com.google.ads.datamanager.v1.IngestEventsResponse;
 import com.google.ads.datamanager.v1.IngestionServiceClient;
@@ -159,6 +160,14 @@ public class IngestEvents {
         continue;
       }
       eventBuilder.setTransactionId(eventRecord.transactionId);
+      if (!Strings.isNullOrEmpty(eventRecord.eventSource)) {
+        try {
+          eventBuilder.setEventSource(EventSource.valueOf(eventRecord.eventSource));
+        } catch (IllegalArgumentException iae) {
+          LOGGER.warning("Skipping event with invalid event source: " + eventRecord.eventSource);
+          continue;
+        }
+      }
 
       if (!Strings.isNullOrEmpty(eventRecord.gclid)) {
         eventBuilder.setAdIdentifiers(AdIdentifiers.newBuilder().setGclid(eventRecord.gclid));
@@ -271,6 +280,7 @@ public class IngestEvents {
     private List<String> phoneNumbers;
     private String timestamp;
     private String transactionId;
+    private String eventSource;
     private Double value;
     private String currency;
     private String gclid;

@@ -25,8 +25,8 @@ import com.google.ads.datamanager.v1.Destination;
 import com.google.ads.datamanager.v1.IngestAudienceMembersRequest;
 import com.google.ads.datamanager.v1.IngestAudienceMembersResponse;
 import com.google.ads.datamanager.v1.IngestionServiceClient;
-import com.google.ads.datamanager.v1.Product;
 import com.google.ads.datamanager.v1.ProductAccount;
+import com.google.ads.datamanager.v1.ProductAccount.AccountType;
 import com.google.ads.datamanager.v1.TermsOfService;
 import com.google.ads.datamanager.v1.TermsOfServiceStatus;
 import com.google.ads.datamanager.v1.UserData;
@@ -55,10 +55,10 @@ public class IngestAudienceMembers {
   private static final class ParamsConfig extends BaseParamsConfig<ParamsConfig> {
 
     @Parameter(
-        names = "--operatingAccountProduct",
+        names = "--operatingAccountType",
         required = true,
-        description = "Product type of the operating account")
-    Product operatingAccountProduct;
+        description = "Account type of the operating account")
+    AccountType operatingAccountType;
 
     @Parameter(
         names = "--operatingAccountId",
@@ -67,10 +67,10 @@ public class IngestAudienceMembers {
     String operatingAccountId;
 
     @Parameter(
-        names = "--loginAccountProduct",
+        names = "--loginAccountType",
         required = false,
-        description = "Product type of the login account")
-    Product loginAccountProduct;
+        description = "Account type of the login account")
+    AccountType loginAccountType;
 
     @Parameter(
         names = "--loginAccountId",
@@ -79,10 +79,10 @@ public class IngestAudienceMembers {
     String loginAccountId;
 
     @Parameter(
-        names = "--linkedAccountProduct",
+        names = "--linkedAccountType",
         required = false,
-        description = "Product type of the linked account")
-    Product linkedAccountProduct;
+        description = "Account type of the linked account")
+    AccountType linkedAccountType;
 
     @Parameter(
         names = "--linkedAccountId",
@@ -109,13 +109,13 @@ public class IngestAudienceMembers {
 
   public static void main(String[] args) throws IOException {
     ParamsConfig paramsConfig = new ParamsConfig().parseOrExit(args);
-    if ((paramsConfig.loginAccountId == null) != (paramsConfig.loginAccountProduct == null)) {
+    if ((paramsConfig.loginAccountId == null) != (paramsConfig.loginAccountType == null)) {
       throw new IllegalArgumentException(
-          "Must specify either both or neither of login account ID and login account product");
+          "Must specify either both or neither of login account ID and login account type");
     }
-    if ((paramsConfig.linkedAccountId == null) != (paramsConfig.linkedAccountProduct == null)) {
+    if ((paramsConfig.linkedAccountId == null) != (paramsConfig.linkedAccountType == null)) {
       throw new IllegalArgumentException(
-          "Must specify either both or neither of linked account ID and linked account product");
+          "Must specify either both or neither of linked account ID and linked account type");
     }
     new IngestAudienceMembers().runExample(paramsConfig);
   }
@@ -175,19 +175,19 @@ public class IngestAudienceMembers {
         Destination.newBuilder()
             .setOperatingAccount(
                 ProductAccount.newBuilder()
-                    .setProduct(params.operatingAccountProduct)
+                    .setAccountType(params.operatingAccountType)
                     .setAccountId(params.operatingAccountId))
             .setProductDestinationId(params.audienceId);
-    if (params.loginAccountProduct != null && params.loginAccountId != null) {
+    if (params.loginAccountType != null && params.loginAccountId != null) {
       destinationBuilder.setLoginAccount(
           ProductAccount.newBuilder()
-              .setProduct(params.loginAccountProduct)
+              .setAccountType(params.loginAccountType)
               .setAccountId(params.loginAccountId));
     }
-    if (params.linkedAccountProduct != null && params.linkedAccountId != null) {
+    if (params.linkedAccountType != null && params.linkedAccountId != null) {
       destinationBuilder.setLinkedAccount(
           ProductAccount.newBuilder()
-              .setProduct(params.linkedAccountProduct)
+              .setAccountType(params.linkedAccountType)
               .setAccountId(params.linkedAccountId));
     }
 

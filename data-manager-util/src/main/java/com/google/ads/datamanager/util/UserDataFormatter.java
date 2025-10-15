@@ -362,6 +362,7 @@ public class UserDataFormatter {
    * @throws NullPointerException if {@code encrypter} is null
    */
   public String processPhoneNumber(String phoneNumber, Encoding encoding, Encrypter encrypter) {
+    Preconditions.checkNotNull(encrypter, "Null encrypter");
     return hashEncodeAndEncrypt(formatPhoneNumber(phoneNumber), encoding, encrypter);
   }
 
@@ -394,7 +395,8 @@ public class UserDataFormatter {
    * @throws NullPointerException if {@code encrypter} is null
    */
   public String processGivenName(String givenName, Encoding encoding, Encrypter encrypter) {
-    return hashAndEncode(formatGivenName(givenName), encoding);
+    Preconditions.checkNotNull(encrypter, "Null encrypter");
+    return hashEncodeAndEncrypt(formatGivenName(givenName), encoding, encrypter);
   }
 
   /**
@@ -426,7 +428,8 @@ public class UserDataFormatter {
    * @throws NullPointerException if {@code encrypter} is null
    */
   public String processFamilyName(String givenName, Encoding encoding, Encrypter encrypter) {
-    return hashAndEncode(formatFamilyName(givenName), encoding);
+    Preconditions.checkNotNull(encrypter, "Null encrypter");
+    return hashEncodeAndEncrypt(formatFamilyName(givenName), encoding, encrypter);
   }
 
   /**

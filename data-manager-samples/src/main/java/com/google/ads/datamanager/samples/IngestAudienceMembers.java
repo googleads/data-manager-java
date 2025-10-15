@@ -16,12 +16,16 @@ package com.google.ads.datamanager.samples;
 
 import com.beust.jcommander.Parameter;
 import com.google.ads.datamanager.samples.common.BaseParamsConfig;
+import com.google.ads.datamanager.util.Encrypter;
 import com.google.ads.datamanager.util.UserDataFormatter;
 import com.google.ads.datamanager.util.UserDataFormatter.Encoding;
 import com.google.ads.datamanager.v1.AudienceMember;
 import com.google.ads.datamanager.v1.Consent;
 import com.google.ads.datamanager.v1.ConsentStatus;
 import com.google.ads.datamanager.v1.Destination;
+import com.google.ads.datamanager.v1.EncryptionInfo;
+import com.google.ads.datamanager.v1.GcpWrappedKeyInfo;
+import com.google.ads.datamanager.v1.GcpWrappedKeyInfo.KeyType;
 import com.google.ads.datamanager.v1.IngestAudienceMembersRequest;
 import com.google.ads.datamanager.v1.IngestAudienceMembersResponse;
 import com.google.ads.datamanager.v1.IngestionServiceClient;
@@ -35,13 +39,14 @@ import com.google.common.collect.Lists;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Sends an {@link IngestAudienceMembersRequest} without using encryption.
+ * Sends an {@link IngestAudienceMembersRequest} with the option to use encryption.
  *
  * <p>User data is read from a data file. See the {@code audience_members_1.csv} file in the {@code
  * resources/sampledata} directory for a sample file.
@@ -100,6 +105,24 @@ public class IngestAudienceMembers {
     String csvFile;
 
     @Parameter(
+        names = "--keyUri",
+        required = false,
+        description =
+            "URI of the Google Cloud KMS key for encrypting data. If this parameter is set, you"
+                + " must also set the --wipProvider parameter.")
+    String keyUri;
+
+    @Parameter(
+        names = "--wipProvider",
+        required = false,
+        description =
+            "Workload Identity Pool provider name for encrypting data. If this parameter is set,"
+                + " you must also set the --keyUri parameter. The argument for this parameter must"
+                + " follow the pattern:"
+                + " projects/PROJECT_ID/locations/global/workloadIdentityPools/WIP_ID/providers/PROVIDER_ID")
+    String wipProvider;
+
+    @Parameter(
         names = "--validateOnly",
         required = false,
         arity = 1,
@@ -107,7 +130,7 @@ public class IngestAudienceMembers {
     boolean validateOnly = true;
   }
 
-  public static void main(String[] args) throws IOException {
+  public static void main(String[] args) throws IOException, GeneralSecurityException {
     ParamsConfig paramsConfig = new ParamsConfig().parseOrExit(args);
     if ((paramsConfig.loginAccountId == null) != (paramsConfig.loginAccountType == null)) {
       throw new IllegalArgumentException(
@@ -117,6 +140,10 @@ public class IngestAudienceMembers {
       throw new IllegalArgumentException(
           "Must specify either both or neither of linked account ID and linked account type");
     }
+    if ((paramsConfig.keyUri == null) != (paramsConfig.wipProvider == null)) {
+      throw new IllegalArgumentException(
+          "Must specify either both or neither of key URI and WIP provider");
+    }
     new IngestAudienceMembers().runExample(paramsConfig);
   }
 
@@ -125,13 +152,20 @@ public class IngestAudienceMembers {
    *
    * @param params the parameters for the example
    */
-  private void runExample(ParamsConfig params) throws IOException {
+  private void runExample(ParamsConfig params) throws IOException, GeneralSecurityException {
     // Reads member data from the data file.
     List<Member> memberList = readMemberDataFile(params.csvFile);
 
     // Gets an instance of the UserDataFormatter for normalizing and formatting the data.
     UserDataFormatter userDataFormatter = UserDataFormatter.create();
 
+    // Determines if encryption parameters are set.
+    boolean useEncryption = (params.keyUri != null && params.wipProvider != null);
+    Encrypter encrypter = null;
+    if (useEncryption) {
+      // Gets an instance of the encryption utility.
+      encrypter = Encrypter.createForGcpKms(params.keyUri, null);
+    }
     // Builds the audience_members collection for the request.
     List<AudienceMember> audienceMembers = new ArrayList<>();
     for (Member member : memberList) {
@@ -141,12 +175,15 @@ public class IngestAudienceMembers {
       for (String email : member.emailAddresses) {
         String processedEmail;
         try {
-          processedEmail = userDataFormatter.processEmailAddress(email, Encoding.HEX);
+          processedEmail =
+              useEncryption
+                  ? userDataFormatter.processEmailAddress(email, Encoding.HEX, encrypter)
+                  : userDataFormatter.processEmailAddress(email, Encoding.HEX);
         } catch (IllegalArgumentException iae) {
           // Skips invalid input.
           continue;
         }
-        // Sets the email address identifier to the encoded email hash.
+        // Sets the email address identifier to the encoded and possibly encrypted email hash.
         userDataBuilder.addUserIdentifiers(
             UserIdentifier.newBuilder().setEmailAddress(processedEmail));
       }
@@ -155,12 +192,15 @@ public class IngestAudienceMembers {
       for (String phoneNumber : member.phoneNumbers) {
         String processedPhoneNumber;
         try {
-          processedPhoneNumber = userDataFormatter.processPhoneNumber(phoneNumber, Encoding.HEX);
+          processedPhoneNumber =
+              useEncryption
+                  ? userDataFormatter.processPhoneNumber(phoneNumber, Encoding.HEX, encrypter)
+                  : userDataFormatter.processPhoneNumber(phoneNumber, Encoding.HEX);
         } catch (IllegalArgumentException iae) {
           // Skips invalid input.
           continue;
         }
-        // Sets the phone number identifier to the encoded phone number hash.
+        // Sets the phone number identifier to the encoded and possibly encrypted phone number hash.
         userDataBuilder.addUserIdentifiers(
             UserIdentifier.newBuilder().setPhoneNumber(processedPhoneNumber));
       }
@@ -191,6 +231,23 @@ public class IngestAudienceMembers {
               .setAccountId(params.linkedAccountId));
     }
 
+    // Configures the EncryptionInfo for the request if encryption parameters provided.
+    EncryptionInfo encryptionInfo = null;
+    if (useEncryption) {
+      encryptionInfo =
+          EncryptionInfo.newBuilder()
+              .setGcpWrappedKeyInfo(
+                  GcpWrappedKeyInfo.newBuilder()
+                      .setKekUri(params.keyUri)
+                      .setWipProvider(params.wipProvider)
+                      .setKeyType(KeyType.XCHACHA20_POLY1305)
+                      // Sets the encrypted_dek field to the Base64-encoded encrypted DEK.
+                      .setEncryptedDek(
+                          userDataFormatter.base64Encode(
+                              encrypter.getEncryptedDek().toByteArray())))
+              .build();
+    }
+
     try (IngestionServiceClient ingestionServiceClient = IngestionServiceClient.create()) {
       int requestCount = 0;
       // Batches requests to send up to the maximum number of audience members per request.
@@ -198,7 +255,7 @@ public class IngestAudienceMembers {
           Lists.partition(audienceMembers, MAX_MEMBERS_PER_REQUEST)) {
         requestCount++;
         // Builds the request.
-        IngestAudienceMembersRequest request =
+        IngestAudienceMembersRequest.Builder requestBuilder =
             IngestAudienceMembersRequest.newBuilder()
                 .addDestinations(destinationBuilder)
                 // Adds members from the current batch.
@@ -215,8 +272,15 @@ public class IngestAudienceMembers {
                 .setTermsOfService(
                     TermsOfService.newBuilder()
                         .setCustomerMatchTermsOfServiceStatus(TermsOfServiceStatus.ACCEPTED))
-                .build();
+                // Sets encoding to hex encoding since that was used to encode the encrypted values.
+                .setEncoding(com.google.ads.datamanager.v1.Encoding.HEX);
 
+        if (useEncryption) {
+          // Sets encryption info on the request.
+          requestBuilder.setEncryptionInfo(encryptionInfo);
+        }
+
+        IngestAudienceMembersRequest request = requestBuilder.build();
         IngestAudienceMembersResponse response =
             ingestionServiceClient.ingestAudienceMembers(request);
         if (LOGGER.isLoggable(Level.INFO)) {

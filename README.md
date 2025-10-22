@@ -88,3 +88,7 @@ Then, run the sample by passing:
 ## Contributing
 
 Contributions welcome! See the [Contributing Guide](CONTRIBUTING.md).
+
+## Authors
+
+- [Josh Radcliff](https://github.com/jradcliff)

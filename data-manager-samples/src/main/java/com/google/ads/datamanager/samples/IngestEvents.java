@@ -136,7 +136,7 @@ public class IngestEvents {
    * @param params the parameters for the example
    */
   private void runExample(ParamsConfig params) throws IOException {
-    // Reads member data from the data file.
+    // Reads event data from the JSON file.
     List<EventRecord> eventRecords = readEventData(params.jsonFile);
 
     // Gets an instance of the UserDataFormatter for normalizing and formatting the data.

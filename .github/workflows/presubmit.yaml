@@ -1,0 +1,23 @@
+# Gives read-only access
+permissions: read-all
+name: Presubmit
+on:
+  pull_request:
+    branches:
+      - main
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v4
+    - name: Set up Java
+      uses: actions/setup-java@v4
+      with:
+        java-version: '11'
+        distribution: 'temurin'
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v4
+    # TODO(jradcliff): Add a lint step. Currently blocked by https://github.com/abcxyz/actions/issues/107.
+    - name: Build with Gradle
+      run: ./gradlew build

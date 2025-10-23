@@ -18,13 +18,6 @@ jobs:
         distribution: 'temurin'
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v4
-    - name: Run Java Lint Check on utilities
-      uses: abcxyz/actions/.github/actions/lint-java@main
-      with:
-        directory: 'data-manager-util/src'
-    - name: Run Java Lint Check on samples
-      uses: abcxyz/actions/.github/actions/lint-java@main
-      with:
-        directory: 'data-manager-samples/src'
+    # TODO(jradcliff): Add a lint step. Currently blocked by https://github.com/abcxyz/actions/issues/107.
     - name: Build with Gradle
       run: ./gradlew build

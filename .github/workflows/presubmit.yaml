@@ -22,11 +22,9 @@ jobs:
       uses: abcxyz/actions/.github/actions/lint-java@main
       with:
         directory: 'data-manager-util/src'
-        graalvm_java_version: '11'
     - name: Run Java Lint Check on samples
       uses: abcxyz/actions/.github/actions/lint-java@main
       with:
         directory: 'data-manager-samples/src'
-        graalvm_java_version: '11'
     - name: Build with Gradle
       run: ./gradlew build

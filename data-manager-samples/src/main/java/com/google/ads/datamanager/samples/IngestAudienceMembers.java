@@ -271,9 +271,7 @@ public class IngestAudienceMembers {
                 .setEncoding(com.google.ads.datamanager.v1.Encoding.HEX)
                 .setTermsOfService(
                     TermsOfService.newBuilder()
-                        .setCustomerMatchTermsOfServiceStatus(TermsOfServiceStatus.ACCEPTED))
-                // Sets encoding to hex encoding since that was used to encode the encrypted values.
-                .setEncoding(com.google.ads.datamanager.v1.Encoding.HEX);
+                        .setCustomerMatchTermsOfServiceStatus(TermsOfServiceStatus.ACCEPTED));
 
         if (useEncryption) {
           // Sets encryption info on the request.

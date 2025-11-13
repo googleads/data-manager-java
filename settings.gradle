@@ -14,7 +14,10 @@
  * limitations under the License.
  */
 
-rootProject.name = 'data-manager-parent'
+// Uses 'data-manager-util-parent' for the root project to avoid conflict with
+// the 'data-manager-parent' project for the client library
+// (https://central.sonatype.com/artifact/com.google.api-ads/data-manager-parent).
+rootProject.name = 'data-manager-util-parent'
 include ':data-manager-util'
 include ':data-manager-samples'
 

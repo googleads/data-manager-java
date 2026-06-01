@@ -75,12 +75,12 @@ public class UserDataFormatterTest {
         formatter.formatEmailAddress("j.e.f..ferson.Loves.hiking@googlemail.com"));
     assertEquals(
         "Plus sign and everything after should be stripped from gmail.com address",
-        "janedoe@gmail.com",
-        formatter.formatEmailAddress("Jane.Doe+shopping@gmail.com"));
+        "cloudysanfrancisco@gmail.com",
+        formatter.formatEmailAddress("Cloudy.SanFrancisco+shopping@gmail.com"));
     assertEquals(
         "Plus sign and everything after should be stripped from googlemail.com address",
-        "janedoe@googlemail.com",
-        formatter.formatEmailAddress("Jane.Doe+shopping@googlemail.com"));
+        "cloudysanfrancisco@googlemail.com",
+        formatter.formatEmailAddress("Cloudy.SanFrancisco+shopping@googlemail.com"));
   }
 
   @Test

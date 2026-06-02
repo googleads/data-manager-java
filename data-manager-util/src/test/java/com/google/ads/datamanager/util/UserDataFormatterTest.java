@@ -37,6 +37,10 @@ public class UserDataFormatterTest {
         "Case should be normalized in domain",
         "quinny@example.com",
         formatter.formatEmailAddress("QuinnY@EXAMPLE.com"));
+    assertEquals(
+        "Plus sign and everything after should not be stripped from non google emails",
+        "user.name+nyc@example.com",
+        formatter.formatEmailAddress("user.name+NYC@Example.com"));
   }
 
   @Test
@@ -69,6 +73,14 @@ public class UserDataFormatterTest {
     assertEquals(
         "jeffersonloveshiking@googlemail.com",
         formatter.formatEmailAddress("j.e.f..ferson.Loves.hiking@googlemail.com"));
+    assertEquals(
+        "Plus sign and everything after should be stripped from gmail.com address",
+        "cloudysanfrancisco@gmail.com",
+        formatter.formatEmailAddress("Cloudy.SanFrancisco+shopping@gmail.com"));
+    assertEquals(
+        "Plus sign and everything after should be stripped from googlemail.com address",
+        "cloudysanfrancisco@googlemail.com",
+        formatter.formatEmailAddress("Cloudy.SanFrancisco+shopping@googlemail.com"));
   }
 
   @Test

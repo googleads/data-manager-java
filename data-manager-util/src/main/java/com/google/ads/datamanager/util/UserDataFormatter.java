@@ -146,6 +146,12 @@ public class UserDataFormatter {
       // "Create variations of your email address" at:
       // https://support.google.com/a/users/answer/9282734
 
+      // Removes plus sign (+) and all characters that follow it.
+      int plusIndex = username.indexOf('+');
+      if (plusIndex != -1) {
+        username = username.substring(0, plusIndex);
+      }
+
       // Removes all periods (.).
       username = PERIOD_PATTERN.matcher(username).replaceAll("");
     }

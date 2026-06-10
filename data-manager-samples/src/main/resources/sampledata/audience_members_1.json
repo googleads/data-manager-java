@@ -3,6 +3,14 @@
     "emails": [
       "dana@example.com",
       "DanaM@example.com"
+    ],
+    "ipInfos": [
+      {
+        "ipAddress": "192.0.2.211"
+      },
+      {
+        "ipAddress": "198.51.100.14"
+      }
     ]
   },
   {
@@ -21,6 +29,13 @@
     "emails": [
       "quinn@CYMBALGROUP.com",
       "baklavainthebalkans@gmail.com"
+    ],
+    "ipInfos": [
+      {
+        "ipAddress": "203.0.113.98",
+        "observeStartTime": "2026-06-10T20:17:52.0-04:00",
+        "observeEndTime": "2026-06-17T04:02:04.123-04:00"
+      }
     ]
   },
   {

@@ -1,0 +1,35 @@
+[
+  {
+    "emails": [
+      "dana@example.com",
+      "DanaM@example.com"
+    ]
+  },
+  {
+    "emails": [
+      "ALEXF@example.com",
+      "AlexF@cymbalgroup.com",
+      "alexF@altostrat.com"
+    ],
+    "phoneNumbers": [
+      "+1-800-555-0100",
+      "+1 800-555-0101",
+      "+1 800-555-0102"
+    ]
+  },
+  {
+    "emails": [
+      "quinn@CYMBALGROUP.com",
+      "baklavainthebalkans@gmail.com"
+    ]
+  },
+  {
+    "emails": [
+      "rosario@example.org",
+      "cloudySanFrancisco@GMAIL.com"
+    ],
+    "phoneNumbers": [
+      "+1-800-555-0110"
+    ]
+  }
+]

@@ -36,9 +36,14 @@ import com.google.ads.datamanager.v1.TermsOfServiceStatus;
 import com.google.ads.datamanager.v1.UserData;
 import com.google.ads.datamanager.v1.UserIdentifier;
 import com.google.common.collect.Lists;
+import com.google.common.reflect.TypeToken;
+import com.google.gson.GsonBuilder;
 import java.io.BufferedReader;
-import java.io.FileReader;
 import java.io.IOException;
+import java.lang.reflect.Type;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.List;
@@ -48,7 +53,7 @@ import java.util.logging.Logger;
 /**
  * Sends an {@link IngestAudienceMembersRequest} with the option to use encryption.
  *
- * <p>User data is read from a data file. See the {@code audience_members_1.csv} file in the {@code
+ * <p>User data is read from a data file. See the {@code audience_members_1.json} file in the {@code
  * resources/sampledata} directory for a sample file.
  */
 public class IngestAudienceMembers {
@@ -99,10 +104,10 @@ public class IngestAudienceMembers {
     String audienceId;
 
     @Parameter(
-        names = "--csvFile",
+        names = "--jsonFile",
         required = true,
-        description = "Comma-separated file containing user data to ingest")
-    String csvFile;
+        description = "JSON file containing user data to ingest")
+    String jsonFile;
 
     @Parameter(
         names = "--keyUri",
@@ -154,7 +159,7 @@ public class IngestAudienceMembers {
    */
   private void runExample(ParamsConfig params) throws IOException, GeneralSecurityException {
     // Reads member data from the data file.
-    List<Member> memberList = readMemberDataFile(params.csvFile);
+    List<Member> memberList = readMemberData(params.jsonFile);
 
     // Gets an instance of the UserDataFormatter for normalizing and formatting the data.
     UserDataFormatter userDataFormatter = UserDataFormatter.create();
@@ -172,7 +177,7 @@ public class IngestAudienceMembers {
       UserData.Builder userDataBuilder = UserData.newBuilder();
 
       // Adds a UserIdentifier for each valid email address for the member.
-      for (String email : member.emailAddresses) {
+      for (String email : member.emails) {
         String processedEmail;
         try {
           processedEmail =
@@ -200,7 +205,8 @@ public class IngestAudienceMembers {
           // Skips invalid input.
           continue;
         }
-        // Sets the phone number identifier to the encoded and possibly encrypted phone number hash.
+        // Sets the phone number identifier to the encoded and possibly encrypted phone number
+        // hash.
         userDataBuilder.addUserIdentifiers(
             UserIdentifier.newBuilder().setPhoneNumber(processedPhoneNumber));
       }
@@ -278,9 +284,17 @@ public class IngestAudienceMembers {
           requestBuilder.setEncryptionInfo(encryptionInfo);
         }
 
+        // Builds and logs the request.
         IngestAudienceMembersRequest request = requestBuilder.build();
+        if (LOGGER.isLoggable(Level.INFO)) {
+          LOGGER.info(String.format("Request #%d:%n%s", requestCount, request));
+        }
+
+        // Sends the request.
         IngestAudienceMembersResponse response =
             ingestionServiceClient.ingestAudienceMembers(request);
+
+        // Logs the response.
         if (LOGGER.isLoggable(Level.INFO)) {
           LOGGER.info(String.format("Response for request #%d:%n%s", requestCount, response));
         }
@@ -290,60 +304,26 @@ public class IngestAudienceMembers {
   }
 
   /** Data object for a single row of input data. */
+  @SuppressWarnings("unused")
   private static class Member {
-    private final List<String> emailAddresses = new ArrayList<>();
-    private final List<String> phoneNumbers = new ArrayList<>();
+    private List<String> emails = new ArrayList<>();
+    private List<String> phoneNumbers = new ArrayList<>();
   }
 
   /**
-   * Reads the data file and parses each line into a {@link IngestAudienceMembers.Member} object.
+   * Reads the data file and parses it into a list of {@link IngestAudienceMembers.Member} objects.
    *
-   * @param dataFile the CSV data file
+   * @param jsonFile the JSON data file
    * @return a list of Member objects
    */
-  private List<Member> readMemberDataFile(String dataFile) throws IOException {
-    List<Member> members = new ArrayList<>();
-    try (BufferedReader reader = new BufferedReader(new FileReader(dataFile))) {
-      String line;
-      int lineNumber = 0;
-      while ((line = reader.readLine()) != null) {
-        lineNumber++;
-        if (line.startsWith("#")) {
-          // Skips comment lines.
-          continue;
-        }
-        // Expected format:
-        // email_1,email_2,email_3,phone_1,phone_2,phone_3
-        String[] columns = line.split(",");
-        if (columns[0].equals("email_1")) {
-          // Skips header row.
-          continue;
-        }
-        Member member = new Member();
-        for (int col = 0; col < columns.length; col++) {
-          if (columns[col] == null || columns[col].trim().isEmpty()) {
-            // Skips blank value for the row and column.
-            continue;
-          }
-          // Parses the row, ignoring anything beyond column index 5.
-          if (col < 3) {
-            member.emailAddresses.add(columns[col]);
-          } else if (col < 6) {
-            member.phoneNumbers.add(columns[col]);
-          } else {
-            LOGGER.warning("Ignoring column index " + col + " in line #" + lineNumber);
-          }
-        }
-        if (member.emailAddresses.isEmpty() && member.phoneNumbers.isEmpty()) {
-          // Skips the row since it contains no user data.
-          LOGGER.warning(String.format("Ignoring line %d. No data.", lineNumber));
-        } else {
-          // Adds the parsed user data to the list.
-          members.add(member);
-        }
-      }
-    }
+  private List<Member> readMemberData(String jsonFile) throws IOException {
+    try (BufferedReader jsonReader =
+        Files.newBufferedReader(Paths.get(jsonFile), StandardCharsets.UTF_8)) {
+      // Define the type for Gson to deserialize into (List of Member objects)
+      Type recordListType = new TypeToken<ArrayList<Member>>() {}.getType();
 
-    return members;
+      // Parse the JSON string from the file into a List of Member objects
+      return new GsonBuilder().create().fromJson(jsonReader, recordListType);
+    }
   }
 }

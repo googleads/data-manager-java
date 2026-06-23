@@ -20,6 +20,7 @@ import com.google.ads.datamanager.util.Encrypter;
 import com.google.ads.datamanager.util.UserDataFormatter;
 import com.google.ads.datamanager.util.UserDataFormatter.Encoding;
 import com.google.ads.datamanager.v1.AudienceMember;
+import com.google.ads.datamanager.v1.CompositeData;
 import com.google.ads.datamanager.v1.Consent;
 import com.google.ads.datamanager.v1.ConsentStatus;
 import com.google.ads.datamanager.v1.Destination;
@@ -29,15 +30,18 @@ import com.google.ads.datamanager.v1.GcpWrappedKeyInfo.KeyType;
 import com.google.ads.datamanager.v1.IngestAudienceMembersRequest;
 import com.google.ads.datamanager.v1.IngestAudienceMembersResponse;
 import com.google.ads.datamanager.v1.IngestionServiceClient;
+import com.google.ads.datamanager.v1.IpData;
 import com.google.ads.datamanager.v1.ProductAccount;
 import com.google.ads.datamanager.v1.ProductAccount.AccountType;
 import com.google.ads.datamanager.v1.TermsOfService;
 import com.google.ads.datamanager.v1.TermsOfServiceStatus;
 import com.google.ads.datamanager.v1.UserData;
 import com.google.ads.datamanager.v1.UserIdentifier;
+import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.reflect.TypeToken;
 import com.google.gson.GsonBuilder;
+import com.google.protobuf.util.Timestamps;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.lang.reflect.Type;
@@ -45,6 +49,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.GeneralSecurityException;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
@@ -174,7 +179,11 @@ public class IngestAudienceMembers {
     // Builds the audience_members collection for the request.
     List<AudienceMember> audienceMembers = new ArrayList<>();
     for (Member member : memberList) {
-      UserData.Builder userDataBuilder = UserData.newBuilder();
+      // Creates a builder for CompositeData to add user data and/or IP address information.
+      CompositeData.Builder compositeDataBuilder = CompositeData.newBuilder();
+
+      // Creates a builder for user data for hashed emails and phone numbers.
+      UserData.Builder userDataBuilder = compositeDataBuilder.getUserDataBuilder();
 
       // Adds a UserIdentifier for each valid email address for the member.
       for (String email : member.emails) {
@@ -211,8 +220,61 @@ public class IngestAudienceMembers {
             UserIdentifier.newBuilder().setPhoneNumber(processedPhoneNumber));
       }
 
-      if (userDataBuilder.getUserIdentifiersCount() > 0) {
-        audienceMembers.add(AudienceMember.newBuilder().setUserData(userDataBuilder).build());
+      // Adds IP address information for each valid entry for the member.
+      for (Member.IpInfo ipInfo : member.ipInfos) {
+        if (!AccountType.GOOGLE_ADS.equals(params.operatingAccountType)) {
+          LOGGER.log(
+              Level.INFO,
+              "Skipping IP address information for operating account type {0}. "
+                  + "Sending IP address is only supported for operating account type {1}.",
+              new Object[] {params.operatingAccountType, AccountType.GOOGLE_ADS});
+        }
+
+        // Trims leading and trailing whitespace from the IP address.
+        String processedIpAddress = Strings.nullToEmpty(ipInfo.ipAddress).trim();
+        if (processedIpAddress.isEmpty()) {
+          // Skips the IP information from the input file since it is missing IP address, which is
+          // required.
+          LOGGER.info("Skipping IP address information with no IP address");
+          continue;
+        }
+
+        // Creates an IpData builder and sets its IP address.
+        IpData.Builder ipDataBuilder =
+            compositeDataBuilder.addIpDataBuilder().setIpAddress(processedIpAddress);
+
+        // Adds observe start time to the IpData if present and in the expected timestamp format.
+        String startTimeString = Strings.nullToEmpty(ipInfo.observeStartTime).trim();
+        if (!startTimeString.isEmpty()) {
+          try {
+            ipDataBuilder.setObserveStartTime(Timestamps.parse(startTimeString));
+          } catch (ParseException e) {
+            LOGGER.log(
+                Level.INFO,
+                "Ignoring observe start time '{0} since it can't be parsed",
+                startTimeString);
+          }
+        }
+
+        // Adds observe end time to the IpData if present and in the expected timestamp format.
+        String endTimeString = Strings.nullToEmpty(ipInfo.observeEndTime).trim();
+        if (!endTimeString.isEmpty()) {
+          try {
+            ipDataBuilder.setObserveEndTime(Timestamps.parse(endTimeString));
+          } catch (ParseException e) {
+            LOGGER.log(
+                Level.INFO,
+                "Ignoring observe end time '{0}' since it can't be parsed",
+                endTimeString);
+          }
+        }
+      }
+
+      if (userDataBuilder.getUserIdentifiersCount() > 0
+          || compositeDataBuilder.getIpDataCount() > 0) {
+        // Adds the CompositeData containing user data, IP address information, or both.
+        audienceMembers.add(
+            AudienceMember.newBuilder().setCompositeData(compositeDataBuilder).build());
       }
     }
 
@@ -308,6 +370,13 @@ public class IngestAudienceMembers {
   private static class Member {
     private List<String> emails = new ArrayList<>();
     private List<String> phoneNumbers = new ArrayList<>();
+    private List<IpInfo> ipInfos = new ArrayList<>();
+
+    private static class IpInfo {
+      private String ipAddress;
+      private String observeStartTime;
+      private String observeEndTime;
+    }
   }
 
   /**

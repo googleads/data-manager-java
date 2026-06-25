@@ -228,6 +228,7 @@ public class IngestAudienceMembers {
               "Skipping IP address information for operating account type {0}. "
                   + "Sending IP address is only supported for operating account type {1}.",
               new Object[] {params.operatingAccountType, AccountType.GOOGLE_ADS});
+          continue;
         }
 
         // Trims leading and trailing whitespace from the IP address.

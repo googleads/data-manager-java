@@ -28,7 +28,7 @@ if (isPublishing) {
 
 group = 'com.google.api-ads'
 description = 'Utilities for working with the Data Manager API'
-version = '0.4.0rc1'
+version = '0.4.0-rc1'
 
 java {
     sourceCompatibility = JavaVersion.VERSION_1_8

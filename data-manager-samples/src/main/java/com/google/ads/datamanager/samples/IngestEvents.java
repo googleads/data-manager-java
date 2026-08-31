@@ -266,7 +266,13 @@ public class IngestEvents {
 
         LOGGER.info(() -> String.format("Request:%n%s", request));
         IngestEventsResponse response = ingestionServiceClient.ingestEvents(request);
-        LOGGER.info(String.format("Response for request #:%n%s", requestCount, response));
+        LOGGER.info(String.format("Response for request #%d:%n%s", requestCount, response));
+
+        if (response.getFieldWarningsCount() > 0) {
+          LOGGER.warning(
+              "Request ingested successfully, but field warnings were returned. Review warning"
+                  + " details and update your implementation as needed.");
+        }
       }
 
       LOGGER.info("# of requests sent: " + requestCount);

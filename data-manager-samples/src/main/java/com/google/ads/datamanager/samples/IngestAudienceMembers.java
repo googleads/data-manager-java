@@ -361,6 +361,12 @@ public class IngestAudienceMembers {
         if (LOGGER.isLoggable(Level.INFO)) {
           LOGGER.info(String.format("Response for request #%d:%n%s", requestCount, response));
         }
+
+        if (response.getFieldWarningsCount() > 0) {
+          LOGGER.warning(
+              "Request ingested successfully, but field warnings were returned. Review warning"
+                  + " details and update your implementation as needed.");
+        }
       }
       LOGGER.info("# of requests sent: " + requestCount);
     }

@@ -15,14 +15,16 @@ export PATH="${JAVA_HOME}/bin:${PATH}"
 
 # 1. Clean, Test, Sign, and Publish to Artifact Registry
 # Keyring / ADC handles authentication via the Kokoro BYOSA service account
-# Keystore fetches the PGP signing key from Keystore config 74347
-KEYSTORE_GPG_FILE="${KOKORO_KEYSTORE_DIR:-}/74347_google_ads_java_gpg_secring"
-if [[ -n "${KOKORO_KEYSTORE_DIR:-}" && -f "${KEYSTORE_GPG_FILE}" ]]; then
-  export SIGNING_KEY="$(cat "${KEYSTORE_GPG_FILE}")"
+# Fetch the PGP signing key from Secret Manager (or fallback to SIGNING_KEY if already set)
+if [[ -z "${SIGNING_KEY:-}" ]]; then
+  echo "=== Fetching GPG signing key from Secret Manager ==="
+  export SIGNING_KEY="$(gcloud secrets versions access latest \
+    --secret="bam-devrel-maven-gpg-key" \
+    --project="bam-devrel-releases")"
 fi
 
 if [[ -z "${SIGNING_KEY:-}" ]]; then
-  echo "ERROR: SIGNING_KEY is not set and Keystore GPG file is missing (${KEYSTORE_GPG_FILE})." >&2
+  echo "ERROR: SIGNING_KEY is not set and could not be fetched from Secret Manager." >&2
   exit 1
 fi
 

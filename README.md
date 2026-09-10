@@ -7,6 +7,26 @@ Utility library and code samples for working with the
 
 https://developers.google.com/data-manager/api/get-started/set-up-access#java
 
+## Add dependencies to your project
+
+To use the utility library in your Java project, add the following dependency:
+
+### Gradle
+
+```groovy
+implementation 'com.google.api-ads:data-manager-util:0.4.0'
+```
+
+### Maven
+
+```xml
+<dependency>
+  <groupId>com.google.api-ads</groupId>
+  <artifactId>data-manager-util</artifactId>
+  <version>0.4.0</version>
+</dependency>
+```
+
 ## Repository structure
 
 - [`data-manager-util`](data-manager-util): Source code for the utility library.

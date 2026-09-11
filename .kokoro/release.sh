@@ -1,6 +1,13 @@
 #!/bin/bash
 set -euo pipefail
-set -x
+
+# ==============================================================================
+# SECURITY NOTICE: DO NOT ADD 'set -x' TO THIS SCRIPT!
+# This script handles PGP signing keys and passphrases from Secret Manager.
+# Enabling bash xtrace (set -x) will echo credentials into CI logs.
+# ==============================================================================
+# Explicitly disable xtrace
+set +x
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${REPO_DIR}"
@@ -25,6 +32,18 @@ fi
 
 if [[ -z "${SIGNING_KEY:-}" ]]; then
   echo "ERROR: SIGNING_KEY is not set and could not be fetched from Secret Manager." >&2
+  exit 1
+fi
+
+if [[ -z "${SIGNING_PASSWORD:-}" ]]; then
+  echo "=== Fetching GPG signing password from Secret Manager ==="
+  export SIGNING_PASSWORD="$(gcloud secrets versions access latest \
+    --secret="bam-devrel-maven-gpg-password" \
+    --project="bam-devrel-releases")"
+fi
+
+if [[ -z "${SIGNING_PASSWORD:-}" ]]; then
+  echo "ERROR: SIGNING_PASSWORD is not set and could not be fetched from Secret Manager." >&2
   exit 1
 fi
 

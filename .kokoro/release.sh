@@ -20,7 +20,33 @@ fi
 export JAVA_HOME="/usr/lib/jvm/java-17-openjdk-amd64"
 export PATH="${JAVA_HOME}/bin:${PATH}"
 
-# 1. Clean, Test, Sign, and Publish to Artifact Registry
+# -----------------------------------------------------------------------------
+# 1. Clean Staging Repository
+# -----------------------------------------------------------------------------
+EXIT_GATE_PROJECT="oss-exit-gate-prod"
+EXIT_GATE_LOCATION="us"
+EXIT_GATE_REPOSITORY="measurement-devrel--mavencentral"
+PACKAGE_NAME="com.google.api-ads:data-manager-util"
+
+# Delete existing package from the Exit Gate staging repository if present.
+# This prevents upload failures on retries or re-releases of the same version.
+if gcloud artifacts packages describe "${PACKAGE_NAME}" \
+    --project="${EXIT_GATE_PROJECT}" \
+    --location="${EXIT_GATE_LOCATION}" \
+    --repository="${EXIT_GATE_REPOSITORY}" &>/dev/null; then
+  echo "=== Deleting existing package '${PACKAGE_NAME}' from Exit Gate staging repository ==="
+  gcloud artifacts packages delete "${PACKAGE_NAME}" \
+    --project="${EXIT_GATE_PROJECT}" \
+    --location="${EXIT_GATE_LOCATION}" \
+    --repository="${EXIT_GATE_REPOSITORY}" \
+    --quiet
+else
+  echo "=== Skipping deletion. Package '${PACKAGE_NAME}' not found in staging repository. This is normal. 🙂 ==="
+fi
+
+# -----------------------------------------------------------------------------
+# 2. Clean, Test, Sign, and Publish to Artifact Registry
+# -----------------------------------------------------------------------------
 # Keyring / ADC handles authentication via the Kokoro BYOSA service account
 # Fetch the PGP signing key from Secret Manager (or fallback to SIGNING_KEY if already set)
 if [[ -z "${SIGNING_KEY:-}" ]]; then
@@ -49,14 +75,18 @@ fi
 
 ./gradlew clean check publish --no-daemon
 
-# 2. DRY_RUN Check
+# -----------------------------------------------------------------------------
+# 3. DRY_RUN Check
+# -----------------------------------------------------------------------------
 if [[ "${DRY_RUN:-false}" == "true" ]]; then
   echo "=== DRY_RUN is enabled. Artifacts staged in Artifact Registry. ==="
   echo "Skipping GCS manifest upload to Exit Gate."
   exit 0
 fi
 
-# 3. Create Exit Gate Release Manifest
+# -----------------------------------------------------------------------------
+# 4. Create Exit Gate Release Manifest
+# -----------------------------------------------------------------------------
 # Maven Central manifests require 'namespace' (groupId) and package 'name' (artifactId)
 cat <<EOF > manifest.json
 {
@@ -74,7 +104,9 @@ cat <<EOF > manifest.json
 }
 EOF
 
-# 4. Trigger Exit Gate Release via GCS Manifest
+# -----------------------------------------------------------------------------
+# 5. Trigger Exit Gate Release via GCS Manifest
+# -----------------------------------------------------------------------------
 EXIT_GATE_BUCKET="gs://oss-exit-gate-prod-projects-bucket/measurement-devrel/mavencentral/manifests"
 MANIFEST_NAME="manifest-$(date +%Y%m%d%H%M%S).json"
 

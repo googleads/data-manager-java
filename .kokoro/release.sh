@@ -17,8 +17,8 @@ if [[ ! -d "/usr/lib/jvm/java-17-openjdk-amd64" ]]; then
   echo "ERROR: Kokoro worker missing expected OpenJDK 17 at /usr/lib/jvm/java-17-openjdk-amd64" >&2
   exit 1
 fi
-export JAVA_HOME="/usr/lib/jvm/java-17-openjdk-amd64"
-export PATH="${JAVA_HOME}/bin:${PATH}"
+export PATH="/usr/lib/jvm/java-17-openjdk-amd64/bin:${PATH}"
+unset JAVA_HOME
 
 # -----------------------------------------------------------------------------
 # 1. Clean Staging Repository
@@ -108,7 +108,7 @@ EOF
 # 5. Trigger Exit Gate Release via GCS Manifest
 # -----------------------------------------------------------------------------
 EXIT_GATE_BUCKET="gs://oss-exit-gate-prod-projects-bucket/measurement-devrel/mavencentral/manifests"
-MANIFEST_NAME="manifest-$(date +%Y%m%d%H%M%S).json"
+MANIFEST_NAME="manifest-$(date --utc +%Y%m%d%H%M%S'UTC').json"
 
 echo "=== Uploading manifest to ${EXIT_GATE_BUCKET}/${MANIFEST_NAME} ==="
 gcloud storage cp manifest.json "${EXIT_GATE_BUCKET}/${MANIFEST_NAME}"

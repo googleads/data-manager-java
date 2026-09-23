@@ -9,8 +9,17 @@ set -euo pipefail
 # Explicitly disable xtrace
 set +x
 
+# Default to dry-run for safety unless DRY_RUN=false is explicitly passed.
+DRY_RUN="${DRY_RUN:-true}"
+if [[ "${DRY_RUN}" != "true" && "${DRY_RUN}" != "false" ]]; then
+  echo "ERROR: DRY_RUN must be 'true' or 'false' (got '${DRY_RUN}')." >&2
+  exit 1
+fi
+
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${REPO_DIR}"
+
+echo "=== Building and Releasing from: ${REPO_DIR} (DRY_RUN=${DRY_RUN}) ==="
 
 # Ensure Java 17 is used on Kokoro Ubuntu 22.04 workers (which default to OpenJDK 11)
 if [[ ! -d "/usr/lib/jvm/java-17-openjdk-amd64" ]]; then
@@ -78,7 +87,7 @@ fi
 # -----------------------------------------------------------------------------
 # 3. DRY_RUN Check
 # -----------------------------------------------------------------------------
-if [[ "${DRY_RUN:-false}" == "true" ]]; then
+if [[ "${DRY_RUN}" == "true" ]]; then
   echo "=== DRY_RUN is enabled. Artifacts staged in Artifact Registry. ==="
   echo "Skipping GCS manifest upload to Exit Gate."
   exit 0

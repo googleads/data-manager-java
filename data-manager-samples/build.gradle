@@ -45,13 +45,13 @@ dependencies {
     implementation 'com.google.protobuf:protobuf-java-util'
     implementation 'com.google.guava:guava'
     implementation 'com.google.code.gson:gson'
-    implementation 'com.google.crypto.tink:tink:1.17.0'
+    implementation 'com.google.crypto.tink:tink:1.23.0'
     implementation 'com.beust:jcommander:1.82'
 
     // Dependencies for tests.
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'org.hamcrest:hamcrest:2.2'
-    testImplementation 'joda-time:joda-time:2.8.2'
+    testImplementation 'joda-time:joda-time:2.14.4'
 }
 
 application {

@@ -51,7 +51,6 @@ dependencies {
     // Dependencies for tests.
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'org.hamcrest:hamcrest:2.2'
-    testImplementation 'joda-time:joda-time:2.8.2'
 }
 
 application {

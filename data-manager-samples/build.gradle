@@ -36,11 +36,8 @@ dependencies {
     // libraries-bom resolves dependency versions for common dependencies such
     // as Guava, Protobuf, and GAX.
     implementation platform('com.google.cloud:libraries-bom:26.+')
-    // data-manager-bom resolves dependency versions for the components of
-    // com.google.api-ads:data-manager.
-    implementation platform('com.google.api-ads:data-manager-bom:0.+')
     // Data Manager API client library
-    implementation 'com.google.api-ads:data-manager'
+    implementation 'com.google.api-ads:data-manager:0.+'
     // Utility library
     implementation project(':data-manager-util')
 

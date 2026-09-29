@@ -15,22 +15,6 @@
     "dependencyDashboardLabels": [
         "type: process",
     ],
-    // https://docs.renovatebot.com/configuration-options/#packagerules
-    "packageRules": [
-        // *** Java dependency rules:
-        // group *ALL* Java dependencies
-        {
-            "matchCategories": [
-                "java"
-            ],
-            "matchUpdateTypes": [
-                "major",
-                "minor",
-                "patch",
-            ],
-            "groupName": "java",
-        },
-    ],
     "rebaseWhen": "behind-base-branch",
     "semanticCommits": "enabled",
     // Create PR for vulnerability alerts immediately.

@@ -15,6 +15,23 @@
     "dependencyDashboardLabels": [
         "type: process",
     ],
+    // https://docs.renovatebot.com/configuration-options/#packagerules
+    "packageRules": [
+        {
+            "description": "Stay on Java 8 compatible versions of Tink (1.19.0+ dropped Java 8)",
+            "matchPackageNames": [
+                "com.google.crypto.tink:tink",
+            ],
+            "allowedVersions": "< 1.19.0",
+        },
+        {
+            "description": "Stay on Java 8 compatible versions of Tink GCP KMS extension (1.11.0+ dropped Java 8)",
+            "matchPackageNames": [
+                "com.google.crypto.tink:tink-gcpkms",
+            ],
+            "allowedVersions": "< 1.11.0",
+        },
+    ],
     "rebaseWhen": "behind-base-branch",
     "semanticCommits": "enabled",
     // Create PR for vulnerability alerts immediately.

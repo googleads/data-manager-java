@@ -30,6 +30,7 @@ import com.google.ads.datamanager.v1.GcpWrappedKeyInfo.KeyType;
 import com.google.ads.datamanager.v1.IngestAudienceMembersRequest;
 import com.google.ads.datamanager.v1.IngestAudienceMembersResponse;
 import com.google.ads.datamanager.v1.IngestionServiceClient;
+import com.google.ads.datamanager.v1.IngestionServiceSettings;
 import com.google.ads.datamanager.v1.IpData;
 import com.google.ads.datamanager.v1.ProductAccount;
 import com.google.ads.datamanager.v1.ProductAccount.AccountType;
@@ -37,6 +38,7 @@ import com.google.ads.datamanager.v1.TermsOfService;
 import com.google.ads.datamanager.v1.TermsOfServiceStatus;
 import com.google.ads.datamanager.v1.UserData;
 import com.google.ads.datamanager.v1.UserIdentifier;
+import com.google.api.gax.grpc.InstantiatingGrpcChannelProvider;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.reflect.TypeToken;
@@ -317,7 +319,17 @@ public class IngestAudienceMembers {
               .build();
     }
 
-    try (IngestionServiceClient ingestionServiceClient = IngestionServiceClient.create()) {
+    // [START create_client]
+    // Creates a client for the ingestion service. Increases the maximum metadata size to 16MB to
+    // prevent RESOURCE_EXHAUSTED errors when responses contain large error details.
+    InstantiatingGrpcChannelProvider provider =
+        IngestionServiceSettings.defaultGrpcTransportProviderBuilder()
+            .setMaxInboundMetadataSize(16 * 1024 * 1024)
+            .build();
+    IngestionServiceSettings settings =
+        IngestionServiceSettings.newBuilder().setTransportChannelProvider(provider).build();
+    try (IngestionServiceClient ingestionServiceClient = IngestionServiceClient.create(settings)) {
+      // [END create_client]
       int requestCount = 0;
       // Batches requests to send up to the maximum number of audience members per request.
       for (List<AudienceMember> audienceMembersBatch :

@@ -329,7 +329,7 @@ public class IngestAudienceMembers {
     IngestionServiceSettings settings =
         IngestionServiceSettings.newBuilder().setTransportChannelProvider(provider).build();
     try (IngestionServiceClient ingestionServiceClient = IngestionServiceClient.create(settings)) {
-      // [END create_client]
+      // [START_EXCLUDE]
       int requestCount = 0;
       // Batches requests to send up to the maximum number of audience members per request.
       for (List<AudienceMember> audienceMembersBatch :
@@ -381,7 +381,9 @@ public class IngestAudienceMembers {
         }
       }
       LOGGER.info("# of requests sent: " + requestCount);
+      // [END_EXCLUDE]
     }
+    // [END create_client]
   }
 
   /** Data object for a single row of input data. */

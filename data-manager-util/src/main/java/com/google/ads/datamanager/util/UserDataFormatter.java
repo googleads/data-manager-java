@@ -290,8 +290,8 @@ public class UserDataFormatter {
    * Returns the provided address line, normalized and formatted.
    *
    * @param addressLine the address line to format
-   * @throws IllegalArgumentException if {@code addressLine} is invalid. Examples of an invalid value
-   *     include a {@code null}, blank, or empty string.
+   * @throws IllegalArgumentException if {@code addressLine} is invalid. Examples of an invalid
+   *     value include a {@code null}, blank, or empty string.
    */
   public String formatAddressLine(String addressLine) {
     return formatLocationString(addressLine, "address line");
@@ -312,8 +312,8 @@ public class UserDataFormatter {
    * Returns the provided administrative area, normalized and formatted.
    *
    * @param administrativeArea the administrative area to format
-   * @throws IllegalArgumentException if {@code administrativeArea} is invalid. Examples of an invalid value
-   *     include a {@code null}, blank, or empty string.
+   * @throws IllegalArgumentException if {@code administrativeArea} is invalid. Examples of an
+   *     invalid value include a {@code null}, blank, or empty string.
    */
   public String formatAdministrativeArea(String administrativeArea) {
     return formatLocationString(administrativeArea, "administrative area");
@@ -533,8 +533,8 @@ public class UserDataFormatter {
    * #hashString(String)}, and either {@link #hexEncode(byte[])} or {@link #base64Encode(byte[])}
    * into a single call.
    *
-   * @return the address line, formatted, hashed, and encoded for the {@code AddressInfo.address_line}
-   *     field in the API.
+   * @return the address line, formatted, hashed, and encoded for the {@code
+   *     AddressInfo.address_line} field in the API.
    * @throws IllegalArgumentException if the address line is invalid
    */
   public String processAddressLine(String addressLine, Encoding encoding) {
@@ -562,13 +562,13 @@ public class UserDataFormatter {
   /**
    * Processes the city.
    *
-   * <p>This is a convenience method that simply calls {@link #formatCity(String)}. This
-   * method exists for consistency so that all data types have a {@code process...} method.
+   * <p>This is a convenience method that simply calls {@link #formatCity(String)}. This method
+   * exists for consistency so that all data types have a {@code process...} method.
    *
    * <p>Doesn't require an {@link Encoding} since cities shouldn't be encoded or hashed.
    *
-   * <p>There is no overloaded counterpart that takes an {@link Encrypter} since cities
-   * shouldn't be encrypted.
+   * <p>There is no overloaded counterpart that takes an {@link Encrypter} since cities shouldn't be
+   * encrypted.
    *
    * @return the city, formatted for the {@code AddressInfo.city} field in the API.
    * @throws IllegalArgumentException if the city is invalid
@@ -580,15 +580,17 @@ public class UserDataFormatter {
   /**
    * Processes the administrative area.
    *
-   * <p>This is a convenience method that simply calls {@link #formatAdministrativeArea(String)}. This
-   * method exists for consistency so that all data types have a {@code process...} method.
+   * <p>This is a convenience method that simply calls {@link #formatAdministrativeArea(String)}.
+   * This method exists for consistency so that all data types have a {@code process...} method.
    *
-   * <p>Doesn't require an {@link Encoding} since administrative areas shouldn't be encoded or hashed.
+   * <p>Doesn't require an {@link Encoding} since administrative areas shouldn't be encoded or
+   * hashed.
    *
-   * <p>There is no overloaded counterpart that takes an {@link Encrypter} since administrative areas
-   * shouldn't be encrypted.
+   * <p>There is no overloaded counterpart that takes an {@link Encrypter} since administrative
+   * areas shouldn't be encrypted.
    *
-   * @return the administrative area, formatted for the {@code AddressInfo.administrative_area} field in the API.
+   * @return the administrative area, formatted for the {@code AddressInfo.administrative_area}
+   *     field in the API.
    * @throws IllegalArgumentException if the administrative area is invalid
    */
   public String processAdministrativeArea(String administrativeArea) {

@@ -31,6 +31,13 @@
             ],
             "allowedVersions": "< 1.11.0",
         },
+        {
+            "description": "Stay on Java 17 compatible versions of google-java-format (2.0.0+ requires Java 21)",
+            "matchPackageNames": [
+                "com.google.googlejavaformat:google-java-format",
+            ],
+            "allowedVersions": "< 2.0.0",
+        },
     ],
     "rebaseWhen": "behind-base-branch",
     "semanticCommits": "enabled",

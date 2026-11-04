@@ -181,8 +181,7 @@ public class CreateUserList {
         // Use USER_ID for first-party user IDs assigned to logged-in users.
         // Note: Display & Video 360 does not support USER_ID lists.
         ingestedUserListInfoBuilder.setUserIdInfo(
-            UserIdInfo.newBuilder()
-                .setDataSourceType(DataSourceType.DATA_SOURCE_TYPE_FIRST_PARTY));
+            UserIdInfo.newBuilder().setDataSourceType(DataSourceType.DATA_SOURCE_TYPE_FIRST_PARTY));
         break;
       case MOBILE_ID:
         // Use MOBILE_ID for mobile advertising IDs.
@@ -193,8 +192,7 @@ public class CreateUserList {
                 .setAppId(params.appId));
         break;
       default:
-        throw new IllegalArgumentException(
-            "Unsupported upload key type: " + params.uploadKeyType);
+        throw new IllegalArgumentException("Unsupported upload key type: " + params.uploadKeyType);
     }
 
     UserList userList =

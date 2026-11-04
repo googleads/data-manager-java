@@ -267,18 +267,9 @@ public class UserDataFormatterTest {
 
   @Test
   public void testFormatCity_invalidInputs() {
-    assertThrows(
-        "Null city",
-        IllegalArgumentException.class,
-        () -> formatter.formatCity(null));
-    assertThrows(
-        "Empty city",
-        IllegalArgumentException.class,
-        () -> formatter.formatCity(""));
-    assertThrows(
-        "Blank city",
-        IllegalArgumentException.class,
-        () -> formatter.formatCity("   "));
+    assertThrows("Null city", IllegalArgumentException.class, () -> formatter.formatCity(null));
+    assertThrows("Empty city", IllegalArgumentException.class, () -> formatter.formatCity(""));
+    assertThrows("Blank city", IllegalArgumentException.class, () -> formatter.formatCity("   "));
   }
 
   @Test
@@ -451,16 +442,14 @@ public class UserDataFormatterTest {
   public void testProcessAddressLine_validInputs_hexEncoding() {
     final String encodedHash = "FF75E73A0E768CC1FA28A64FAEBBCECCB562D7C05F2FFCDD8D100ABAD73E4579";
     assertEquals(
-        encodedHash,
-        formatter.processAddressLine(" 1800 Amphibious Blvd.  ", Encoding.HEX));
+        encodedHash, formatter.processAddressLine(" 1800 Amphibious Blvd.  ", Encoding.HEX));
   }
 
   @Test
   public void testProcessAddressLine_validInputs_base64Encoding() {
     final String encodedHash = "/3XnOg52jMH6KKZPrrvOzLVi18BfL/zdjRAKutc+RXk=";
     assertEquals(
-        encodedHash,
-        formatter.processAddressLine(" 1800 Amphibious Blvd.  ", Encoding.BASE64));
+        encodedHash, formatter.processAddressLine(" 1800 Amphibious Blvd.  ", Encoding.BASE64));
   }
 
   @Test

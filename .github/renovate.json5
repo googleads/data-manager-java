@@ -1,51 +1,47 @@
-// Based partially on https://raw.githubusercontent.com/GoogleCloudPlatform/java-docs-samples/main/.github/renovate.json5
 {
-    "extends": [
-        // https://docs.renovatebot.com/presets-config/#configrecommended
-        "config:recommended",
-        "schedule:earlyMondays",
-        ":ignoreUnstable",
+    extends: [
+        'config:recommended',
+        'schedule:earlyMondays',
+        ':ignoreUnstable',
     ],
-    // Apply label to PRs.
-    "labels": [
-        "dependencies",
+    labels: [
+        'dependencies',
     ],
-    // https://docs.renovatebot.com/configuration-options/#minimumreleaseage
-    "minimumReleaseAge": "3 days",
-    "dependencyDashboardLabels": [
-        "type: process",
-    ],
-    // https://docs.renovatebot.com/configuration-options/#packagerules
-    "packageRules": [
-        {
-            "description": "Stay on Java 8 compatible versions of Tink (1.19.0+ dropped Java 8)",
-            "matchPackageNames": [
-                "com.google.crypto.tink:tink",
-            ],
-            "allowedVersions": "< 1.19.0",
-        },
-        {
-            "description": "Stay on Java 8 compatible versions of Tink GCP KMS extension (1.11.0+ dropped Java 8)",
-            "matchPackageNames": [
-                "com.google.crypto.tink:tink-gcpkms",
-            ],
-            "allowedVersions": "< 1.11.0",
-        },
-        {
-            "description": "Stay on Java 17 compatible versions of google-java-format (2.0.0+ requires Java 21)",
-            "matchPackageNames": [
-                "com.google.googlejavaformat:google-java-format",
-            ],
-            "allowedVersions": "< 2.0.0",
-        },
-    ],
-    "rebaseWhen": "behind-base-branch",
-    "semanticCommits": "enabled",
-    // Create PR for vulnerability alerts immediately.
-    "vulnerabilityAlerts": {
-        "labels": [
-            "security"
+    minimumReleaseAge: '3 days',
+    dependencyDashboard: {
+        labels: [
+            'type: process',
         ],
-        "minimumReleaseAge": null
+    },
+    packageRules: [
+        {
+            description: 'Stay on Java 8 compatible versions of Tink (1.19.0+ dropped Java 8)',
+            matchPackageNames: [
+                'com.google.crypto.tink:tink',
+            ],
+            allowedVersions: '< 1.19.0',
+        },
+        {
+            description: 'Stay on Java 8 compatible versions of Tink GCP KMS extension (1.11.0+ dropped Java 8)',
+            matchPackageNames: [
+                'com.google.crypto.tink:tink-gcpkms',
+            ],
+            allowedVersions: '< 1.11.0',
+        },
+        {
+            description: 'Stay on Java 17 compatible versions of google-java-format (2.0.0+ requires Java 21)',
+            matchPackageNames: [
+                'com.google.googlejavaformat:google-java-format',
+            ],
+            allowedVersions: '< 2.0.0',
+        },
+    ],
+    rebaseWhen: 'behind-base-branch',
+    semanticCommits: 'enabled',
+    vulnerabilityAlerts: {
+        labels: [
+            'security',
+        ],
+        minimumReleaseAge: null,
     },
 }
